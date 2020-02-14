@@ -9,7 +9,6 @@ library(TMB)
 library(FishData)
 Version = get_latest_version( package="VAST" )
 source(paste0(getwd(),'/functions/get_range_edge.R'))
-source(paste0(getwd(),'/functions/get_density.R'))
 
 library(doParallel)
 library(foreach)
@@ -35,7 +34,7 @@ strata.limits <- data.frame('STRATA'="All_areas")
 
 Species_set = 100
 
-Regions = c("Northwest_Atlantic","Eastern_Bering_Sea","California_current")
+Regions = c("Northwest_Atlantic","California_current","Eastern_Bering_Sea")
 regs = c("neus","wc","ebs")
 
 ########################
@@ -86,6 +85,7 @@ for(i in 1:length(Regions)){
     Catch_rates_wcg$AreaSwept_ha <- NULL
     Catch_rates_wcg$Survey <- "annual"
     Catch_rates_wct <- download_catch_rates(survey='West_coast_triennial', species_set=Species_set, measurement_type="biomass", add_zeros = TRUE) 
+    Catch_rates_wct$AreaSwept_ha <- NULL
     Catch_rates_wct$Survey <- "triennial"
     
     Species_list <- intersect(unique(Catch_rates_wcg$Sci), unique(Catch_rates_wct$Sci)) # keep only species found in both surveys
@@ -131,7 +131,7 @@ for(i in 1:length(Regions)){
   # check if axis conversion dataframe exists, set up code to generate if not (has to be derived from the VAST model further down)
   # this dataframe will provide conversions between VAST defaults (easting/northing), lat/lon, and the regional coastal distance / NW axis
   Z_gmFile <- paste0(RegionFile,'Z_gm.rds')
-  if (!file.exists(Z_gmFile)){
+  if (!file.exists(Z_gmFile) & reg %in% c('neus','wc')){
     # load in coastal distance data
     coastdistdat <- readRDS(paste0(getwd(),'/processed-data/',reg,'_coastdistdat.rds'))
     
@@ -147,18 +147,20 @@ for(i in 1:length(Regions)){
         pull()
       return(tmp)
     }
+    # separate for EBS which doesn't use coastal distance
     
-  } else {
-    Z_gm <- readRDS(Z_gmFile) 
-    Z_gm_axes = colnames(Z_gm)
-  }
+  } else if (!file.exists(Z_gmFile) & reg=="ebs"){
+    print(paste0(Z_gmFile, " does not exist"))} else {
+      Z_gm <- readRDS(Z_gmFile) 
+      Z_gm_axes = colnames(Z_gm)
+    }
   
   ########################
   ###  start single-species models in parallel
   ########################
   
   detectCores()
-  registerDoParallel(36)
+  registerDoParallel(18)
   
   foreach(j = Species_list) %dopar%{
     library(VAST)
@@ -169,7 +171,13 @@ for(i in 1:length(Regions)){
     ########################
     
     DF <- Catch_rates[Catch_rates$Sci==j,]
-    Data_Geostat = data.frame( "spp"=DF[,"Sci"], "Year"=DF[,"Year"], "Catch_KG"=DF[,"Wt"], "AreaSwept_km2"=0.01, "Vessel"=0, "Lat"=DF[,"Lat"], "Lon"=DF[,"Long"] )
+    
+    if(reg %in% c('neus','ebs')){
+      Data_Geostat = data.frame( "spp"=DF[,"Sci"], "Year"=DF[,"Year"], "Catch_KG"=DF[,"Wt"], "AreaSwept_km2"=0.01, "Vessel"=0, "Lat"=DF[,"Lat"], "Lon"=DF[,"Long"] )}
+    
+    # west coast needs Survey column for Q_ik catchability covariate 
+    if(reg=="wc"){
+      Data_Geostat = data.frame( "spp"=DF[,"Sci"], "Year"=DF[,"Year"], "Catch_KG"=DF[,"Wt"], "AreaSwept_km2"=0.01, "Vessel"=0, "Lat"=DF[,"Lat"], "Lon"=DF[,"Long"], "Survey"=DF[,"Survey"] )}
     
     # below I'm getting rid of years where the species was observed 100% of the time 
     Data_Geostat$nonzero = ifelse(Data_Geostat$Catch_KG > 0, "Y","N")
@@ -185,7 +193,14 @@ for(i in 1:length(Regions)){
     Data_Placeholder = Data_Geostat[1:5,c('Year','Catch_KG','AreaSwept_km2','Lat','Lon')]
     Data_Placeholder[,'Catch_KG'] = NA
     Data_Placeholder[,'Year'] = min(Data_Placeholder[,'Year']) - 5:1
-    Data_Geostat <- rbind( Data_Placeholder, Data_Geostat[c('Year','Catch_KG','AreaSwept_km2','Lat','Lon')] )
+    
+    # separate WC again to preserve Survey column for Q_ik
+    if(reg %in% c('neus','ebs')){
+      Data_Geostat <- rbind( Data_Placeholder, Data_Geostat[c('Year','Catch_KG','AreaSwept_km2','Lat','Lon')] )}
+    if(reg=='wc'){
+      Data_Placeholder[,'Survey'] = "triennial"
+      Data_Geostat <- rbind( Data_Placeholder, Data_Geostat[c('Year','Catch_KG','AreaSwept_km2','Lat','Lon','Survey')] )}
+    
     
     ########################
     ###  Build model without running, and extract objects
@@ -195,7 +210,7 @@ for(i in 1:length(Regions)){
       fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
                 "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
                 "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
-                "a_i"=Data_Geostat[,'AreaSwept_km2'],# "v_i"=Data_Geostat[,'Vessel'],
+                "a_i"=Data_Geostat[,'AreaSwept_km2'],
                 fine_scale=fine_scale,
                 anisotropy=FALSE,
                 run_model=FALSE
@@ -231,8 +246,7 @@ for(i in 1:length(Regions)){
       Z_gm = cbind( Z_gm, "coast_km"=coast_km )
       Z_gm_axes = colnames(Z_gm)
       saveRDS(Z_gm, Z_gmFile)
-    }
-    else {
+    } else {
       print(paste0(Z_gmFile, " already exists"))
     }
     
@@ -242,11 +256,10 @@ for(i in 1:length(Regions)){
       rotation_radians = pi/4 # 45 degree rotation 
       Z_gm = cbind( Z_gm, "NE_km"=cos(rotation_radians)*Z_gm[,'E_km']+sin(rotation_radians)*Z_gm[,'N_km'] )
       Z_gm = cbind( Z_gm, "NW_km"=-sin(rotation_radians)*Z_gm[,"E_km"]+cos(rotation_radians)*Z_gm[,'N_km'])
-      Z_gm_axes = colnames(Z_gm)}
-      else {
+      Z_gm_axes = colnames(Z_gm)} else {
         print(paste0(Z_gmFile, " already exists"))
       }
-      
+    
     # write out coordinate conversion df if it doesn't exist already 
     
     refdfFile <- paste0(getwd(),'/processed-data/',reg,'_coords_conversion.rds')
@@ -261,7 +274,7 @@ for(i in 1:length(Regions)){
       latlon_g <- as.data.frame(latlon_g)
       refdf <- cbind(Z_gm1, latlon_g) 
       saveRDS(refdf,refdfFile)
-      }
+    }
     if(!file.exists(refdfFile) & reg=="ebs") {
       Z_gm1 = fit$spatial_list$loc_g
       rotation_radians = pi/4 # 45 degree rotation 
@@ -276,76 +289,76 @@ for(i in 1:length(Regions)){
       refdf <- cbind(Z_gm1, latlon_g)
       saveRDS(refdf,refdfFile)
     }
-
-          ########################
-      ###  re-build and run model 
-      ########################
-      
-      if(reg=="wc"){
-        fit =try(
-          fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
-                    "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
-                    "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
-                    "a_i"=Data_Geostat[,'AreaSwept_km2'],# "v_i"=Data_Geostat[,'Vessel'],
-                    "getReportCovariance"=FALSE, "getJointPrecision"=TRUE,
-                    lower=-Inf, upper=Inf,
-                    test_fit = FALSE,
-                    fine_scale=fine_scale,
-                    anisotropy=FALSE,
-                    Use_REML=TRUE,
-                    Z_gm = Z_gm,
-                    Q_ik=Q_ik # ONLY FOR WEST COAST, adding relative catchability factor the survey the data is from
-          ))
-      }
-      else{
-        fit =try(
-          fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
-                    "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
-                    "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
-                    "a_i"=Data_Geostat[,'AreaSwept_km2'], 
-                    "getReportCovariance"=FALSE, "getJointPrecision"=TRUE,
-                    lower=-Inf, upper=Inf,
-                    test_fit = FALSE,
-                    fine_scale=fine_scale,
-                    anisotropy=FALSE,
-                    Use_REML=TRUE,
-                    Z_gm = Z_gm
-          ))}
-      
-      
-      # save species-specific parameter_estimates 
-      if(!class(fit)=="try-error"){
-        capture.output( fit$parameter_estimates, file=file.path(paste0(RegionFile,"parameter_estimates_",j,".txt") ))
-      }
-      
-      # calculate range edges 
-      if(!class(fit)=="try-error"){
-        out <- try(
-          get_range_edge( fit.model=fit,
-                          working_dir=paste0(getwd(),"/"), 
-                          Year_Set=Year_Set, 
-                          Years2Include=Years2Include, # drops years with no data (or 100% data)
-                          n_samples=100, 
-                          quantiles=c(0.05,0.5,0.95),
-                          "Z_gm_axes"=Z_gm_axes )
-        )
-        
-        if(!class(out)=='try-error'){
-          out$species <- paste0(j) 
-          write.csv(out, file.path(paste0(RegionFile,"edges_",j,".csv")))
-        }
-      }
-    }# end of parallel
     
     ########################
-    ###  save outputs
+    ###  re-build and run model 
     ########################
     
-    capture.output( settings, file=file.path(RegionFile,'settings.txt'))
+    if(reg=="wc"){
+      fit =try(
+        fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
+                  "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
+                  "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
+                  "a_i"=Data_Geostat[,'AreaSwept_km2'],
+                  "getReportCovariance"=FALSE, "getJointPrecision"=TRUE,
+                  lower=-Inf, upper=Inf,
+                  test_fit = FALSE,
+                  fine_scale=fine_scale,
+                  anisotropy=FALSE,
+                  Use_REML=TRUE,
+                  Z_gm = Z_gm,
+                  Q_ik=Q_ik # ONLY FOR WEST COAST, adding relative catchability factor the survey the data is from
+        ))
+    }
+    else{
+      fit =try(
+        fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
+                  "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
+                  "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
+                  "a_i"=Data_Geostat[,'AreaSwept_km2'], 
+                  "getReportCovariance"=FALSE, "getJointPrecision"=TRUE,
+                  lower=-Inf, upper=Inf,
+                  test_fit = FALSE,
+                  fine_scale=fine_scale,
+                  anisotropy=FALSE,
+                  Use_REML=TRUE,
+                  Z_gm = Z_gm
+        ))}
     
-    # edge df 
-    edge_files <- list.files(path=RegionFile, pattern="edges_", full.names=TRUE)
-    edge_df <- bind_rows(lapply(edge_files, read.csv))
-    edge_df$X <- NULL
-    saveRDS(edge_df, paste0(getwd(),"/processed-data/neus_vast_edge_df.rds"))
-  }
+    
+    # save species-specific parameter_estimates 
+    if(!class(fit)=="try-error"){
+      capture.output( fit$parameter_estimates, file=file.path(paste0(RegionFile,"parameter_estimates_",j,".txt") ))
+    }
+    
+    # calculate range edges 
+    if(!class(fit)=="try-error"){
+      out <- try(
+        get_range_edge( fit.model=fit,
+                        working_dir=paste0(getwd(),"/"), 
+                        Year_Set=Year_Set, 
+                        Years2Include=Years2Include, # drops years with no data (or 100% data)
+                        n_samples=100, 
+                        quantiles=c(0.05,0.5,0.95),
+                        "Z_gm_axes"=Z_gm_axes )
+      )}
+    
+    if(!class(out)=='try-error'){
+      out$species <- paste0(j) 
+      write.csv(out, file.path(paste0(RegionFile,"edges_",j,".csv")))
+      
+    }
+  }# end of parallel
+  
+  ########################
+  ###  save outputs
+  ########################
+  
+  capture.output( settings, file=file.path(RegionFile,'settings.txt'))
+  
+  # edge df 
+  edge_files <- list.files(path=RegionFile, pattern="edges_", full.names=TRUE)
+  edge_df <- dplyr::bind_rows(lapply(edge_files, read.csv))
+  edge_df$X <- NULL
+  saveRDS(edge_df, paste0(getwd(),"/processed-data/",reg,'_vast_edge_df.rds'))
+}
