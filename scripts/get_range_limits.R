@@ -256,7 +256,8 @@ for(i in 1:length(Regions)){
       rotation_radians = pi/4 # 45 degree rotation 
       Z_gm = cbind( Z_gm, "NE_km"=cos(rotation_radians)*Z_gm[,'E_km']+sin(rotation_radians)*Z_gm[,'N_km'] )
       Z_gm = cbind( Z_gm, "NW_km"=-sin(rotation_radians)*Z_gm[,"E_km"]+cos(rotation_radians)*Z_gm[,'N_km'])
-      Z_gm_axes = colnames(Z_gm)} else {
+      Z_gm_axes = colnames(Z_gm)
+      saveRDS(Z_gm, Z_gmFile)} else {
         print(paste0(Z_gmFile, " already exists"))
       }
     

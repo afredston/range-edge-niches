@@ -33,3 +33,6 @@ Scripts should be run in the following order:
 1. `get_neus_data.R` imports Northeast data (the only dataset requiring manual download) and reformats it to match those downloaded with [FishData](https://github.com/James-Thorson/FishData)
 1. `get_neus_wc_coastlines.R` creates a coastal distance axis for use with VAST for those two regions 
 1. `get_range_limits.R` uses VAST to calculate range edges for all three regions. It runs in parallel but even so may take several days for all species and regions. Note that the output data frames are also in the repository
+1. `get_temp_all.R` fetches historical SST data from the [NOAA ERDDAP server](https://coastwatch.pfeg.noaa.gov/erddap/index.html) for each region
+1. `crop_temp_all.R` takes the SST datasets and crops them to within the US EEZ and a depth cutoff
+1. `match_sst_to_axis.R` matches SST values to points along the axis of range limit measurement for each study region, and combines SST datasets where necessary  
