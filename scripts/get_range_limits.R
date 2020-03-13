@@ -9,7 +9,7 @@ library(TMB)
 library(FishData)
 Version = get_latest_version( package="VAST" )
 source(paste0(getwd(),'/functions/get_range_edge.R'))
-
+# source("C:/Users/alexafh/FishStatsUtils/R/sample_variable.R") # had issues loading this from the package previously for some reason 
 library(doParallel)
 library(foreach)
 
@@ -36,6 +36,8 @@ Species_set = 100
 
 Regions = c("Northwest_Atlantic","California_current","Eastern_Bering_Sea")
 regs = c("neus","wc","ebs")
+
+calculate_relative_to_average = TRUE
 
 ########################
 ### start for loop for each region
@@ -70,6 +72,7 @@ for(i in 1:length(Regions)){
     
     # fix incorrect taxa 
     Catch_rates$Sci <- gsub("Peprilus tracanthus", "Peprilus triacanthus", Catch_rates$Sci)
+    Catch_rates$Sci <- gsub("Geryon quinquedens", "Chaceon quinquedens", Catch_rates$Sci)
     Catch_rates$Year <- as.numeric(Catch_rates$Year)
     
     Catch_rates <- Catch_rates[!Catch_rates$Sci %in% Species_omit,]
@@ -100,6 +103,7 @@ for(i in 1:length(Regions)){
     # fix incorrect taxa
     Catch_rates$Sci <- gsub("Doryteuthis_opalescens", "Loligo_opalescens", Catch_rates$Sci)
     Catch_rates$Sci <- gsub("Bathyraja_kincaidii", "Bathyraja_interrupta", Catch_rates$Sci)
+    Catch_rates$Sci <- gsub("Cancer_magister", "Metacarcinus_magister", Catch_rates$Sci)
     
     Species_list <- unique(Catch_rates$Sci)
   }
@@ -160,7 +164,7 @@ for(i in 1:length(Regions)){
   ########################
   
   detectCores()
-  registerDoParallel(18)
+  registerDoParallel(36)
   
   foreach(j = Species_list) %dopar%{
     library(VAST)
@@ -310,8 +314,7 @@ for(i in 1:length(Regions)){
                   Z_gm = Z_gm,
                   Q_ik=Q_ik # ONLY FOR WEST COAST, adding relative catchability factor the survey the data is from
         ))
-    }
-    else{
+    }else{
       fit =try(
         fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
                   "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
@@ -324,12 +327,16 @@ for(i in 1:length(Regions)){
                   anisotropy=FALSE,
                   Use_REML=TRUE,
                   Z_gm = Z_gm
-        ))}
+        ))
+      }
     
     
     # save species-specific parameter_estimates 
     if(!class(fit)=="try-error"){
-      capture.output( fit$parameter_estimates, file=file.path(paste0(RegionFile,"parameter_estimates_",j,".txt") ))
+      if(calculate_relative_to_average==TRUE){
+        capture.output( fit$parameter_estimates, file=file.path(paste0(RegionFile,"relative_SE_parameter_estimates_",j,".txt") ))
+      }else{capture.output( fit$parameter_estimates, file=file.path(paste0(RegionFile,"absolute_SE_parameter_estimates_",j,".txt") ))
+      }
     }
     
     # calculate range edges 
@@ -341,12 +348,16 @@ for(i in 1:length(Regions)){
                         Years2Include=Years2Include, # drops years with no data (or 100% data)
                         n_samples=100, 
                         quantiles=c(0.05,0.5,0.95),
-                        "Z_gm_axes"=Z_gm_axes )
-      )}
+                        "Z_gm_axes"=Z_gm_axes,
+                        "calculate_relative_to_average" = calculate_relative_to_average)
+      )
+    }
     
     if(!class(out)=='try-error'){
       out$species <- paste0(j) 
-      write.csv(out, file.path(paste0(RegionFile,"edges_",j,".csv")))
+      if(calculate_relative_to_average==TRUE){
+        write.csv(out, file.path(paste0(RegionFile,"relative_SE_edges_",j,".csv")))
+      }else{write.csv(out, file.path(paste0(RegionFile,"absolute_SE_edges_",j,".csv")))}
       
     }
   }# end of parallel
@@ -358,8 +369,15 @@ for(i in 1:length(Regions)){
   capture.output( settings, file=file.path(RegionFile,'settings.txt'))
   
   # edge df 
-  edge_files <- list.files(path=RegionFile, pattern="edges_", full.names=TRUE)
-  edge_df <- dplyr::bind_rows(lapply(edge_files, read.csv))
-  edge_df$X <- NULL
-  saveRDS(edge_df, paste0(getwd(),"/processed-data/",reg,'_vast_edge_df.rds'))
+  if(calculate_relative_to_average==TRUE){
+    edge_files <- list.files(path=RegionFile, pattern="relative_SE_edges_", full.names=TRUE)
+    edge_df <- dplyr::bind_rows(lapply(edge_files, read.csv))
+    edge_df$X <- NULL
+    saveRDS(edge_df, paste0(getwd(),"/processed-data/",reg,'_relative_SE_vast_edge_df.rds'))
+  }else{
+    edge_files <- list.files(path=RegionFile, pattern="absolute_SE_edges_", full.names=TRUE)
+    edge_df <- dplyr::bind_rows(lapply(edge_files, read.csv))
+    edge_df$X <- NULL
+    saveRDS(edge_df, paste0(getwd(),"/processed-data/",reg,'_absolute_SE_vast_edge_df.rds'))
+  }
 }
