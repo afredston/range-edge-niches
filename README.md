@@ -2,7 +2,7 @@
 
 ### A. Fredston-Hermann, M. Pinsky, B. Selden, C. Szuwalski, J. T. Thorson, S. D. Gaines, B. S. Halpern 
 
-To reference the data or methods here, please cite the manuscript. Contact A. Fredston-Hermann with questions. 
+To reference the data or methods here, please cite the manuscript. Contact A. Fredston-Hermann with questions at fredston@rutgers.edu. 
 
 ## Overview 
 
@@ -23,8 +23,7 @@ The repository is organized as follows:
 * `figures` contains **code** to produce figures in the manuscript (the outputs are in `results`).
 * `results` contains figures, tables, and other outputs that are used in the manuscript. 
 
-
-Large files (e.g., raw temperature datasets), images, and PDFs are not version controlled. 
+There are some additional directories for model outputs that are not version controlled. Large files (e.g., raw temperature datasets), images, and PDFs are not version controlled. 
 
 ## Instructions
 
@@ -37,5 +36,5 @@ Scripts should be run in the following order:
 1. `validate_range_limits.R` filters the VAST output for only range limits that actually fall in the study region, based on passing certain filters. This needs to be re-run every time VAST is re-run in `get_range_limits.R` 
 1. `get_temp_all.R` fetches historical SST data from the [NOAA ERDDAP server](https://coastwatch.pfeg.noaa.gov/erddap/index.html) for each region. `get_temp_all.R` and `crop_temp_all.R` only need to be run once
 1. `crop_temp_all.R` takes the SST datasets and crops them to within the US EEZ and a depth cutoff
-1. `match_sst_to_axis.R` matches SST values to points along the axis of range limit measurement for each study region, and combines SST datasets where necessary 
-1. `analyze_range_limits.R` 
+1. `match_sst_to_axis.R` matches SST values to points along the axis of range limit measurement for each study region, and combines SST datasets where necessary. This doesn't need to be re-run if new edges are generated, because it takes as input the VAST coordinates, not the range edge positions.  
+1. `analyze_range_limits.R` executes all models to analyze range edges. 
