@@ -18,19 +18,22 @@ ebs_lonrange <- c(-179.5, -154)
 # https://coastwatch.pfeg.noaa.gov/erddap/griddap/ncdcOisst2Agg_LonPM180.html
 
 hadisst <- "erdHadISST"
-hadisst_years <- c(1967, 2018)
+neus_hadisst_years <- c(1967, 2018)
+wc_hadisst_years <- c(1976, 2018) # don't bother downloading early years for regions with no trawl data 
+ebs_hadisst_years <- c(1981, 2018)
+
 hadisst_fields <- "sst"
 oisst <- "ncdcOisst2Agg_LonPM180"
 oisst_years <- c(1982, 2018)
 oisst_fields <- "sst"
 
-neus_hadisst <- get_rerddap(datasetID = hadisst, latrange = neus_latrange, lonrange = neus_lonrange, startyear=hadisst_years[1], endyear=hadisst_years[2], fields=hadisst_fields, verbose=TRUE)
+neus_hadisst <- get_rerddap(datasetID = hadisst, latrange = neus_latrange, lonrange = neus_lonrange, startyear=neus_hadisst_years[1], endyear=neus_hadisst_years[2], fields=hadisst_fields, verbose=TRUE)
 neus_oisst <- get_rerddap(datasetID = oisst, latrange = neus_latrange, lonrange = neus_lonrange, startyear=oisst_years[1], endyear=oisst_years[2], fields=oisst_fields, verbose=TRUE)
 
-wc_hadisst <- get_rerddap(datasetID = hadisst, latrange = wc_latrange, lonrange = wc_lonrange, startyear=hadisst_years[1], endyear=hadisst_years[2], fields=hadisst_fields, verbose=TRUE)
+wc_hadisst <- get_rerddap(datasetID = hadisst, latrange = wc_latrange, lonrange = wc_lonrange, startyear=wc_hadisst_years[1], endyear=wc_hadisst_years[2], fields=hadisst_fields, verbose=TRUE)
 wc_oisst <- get_rerddap(datasetID = oisst, latrange = wc_latrange, lonrange = wc_lonrange, startyear=oisst_years[1], endyear=oisst_years[2], fields=oisst_fields, verbose=TRUE)
 
-ebs_hadisst <- get_rerddap(datasetID = hadisst, latrange = ebs_latrange, lonrange = ebs_lonrange, startyear=hadisst_years[1], endyear=hadisst_years[2], fields=hadisst_fields, verbose=TRUE)
+ebs_hadisst <- get_rerddap(datasetID = hadisst, latrange = ebs_latrange, lonrange = ebs_lonrange, startyear=ebs_hadisst_years[1], endyear=ebs_hadisst_years[2], fields=hadisst_fields, verbose=TRUE)
 ebs_oisst <- get_rerddap(datasetID = oisst, latrange = ebs_latrange, lonrange = ebs_lonrange, startyear=oisst_years[1], endyear=oisst_years[2], fields=oisst_fields, verbose=TRUE)
 
 # if there is an error that says "Error in R_nc4_open: NetCDF: Unknown file format"

@@ -1,7 +1,7 @@
 # fit single-species models and get range limits in all study regions using VAST 
 
 ########################
-### load packages, functions, data
+### load packages, functions 
 ########################
 
 library(VAST)
@@ -369,6 +369,18 @@ for(i in 1:length(Regions)){
       write.csv(out_relative, file.path(paste0(RegionFile,j,"_relative_SE_edges.csv")))}
     
   }
+  # write out summary dfs of edges once per region
+  
+  rel_edge_files <- list.files(path=RegionFile, pattern="relative_SE_edges.csv", full.names=TRUE)
+  rel_edge_df <- dplyr::bind_rows(lapply(rel_edge_files, read.csv))
+  rel_edge_df$X <- NULL
+  saveRDS(rel_edge_df, paste0(getwd(),"/processed-data/",reg,'_relative_SE_vast_edge_df.rds'))
+  
+  abs_edge_files <- list.files(path=RegionFile, pattern="absolute_SE_edges.csv", full.names=TRUE)
+  abs_edge_df <- dplyr::bind_rows(lapply(abs_edge_files, read.csv))
+  abs_edge_df$X <- NULL
+  saveRDS(abs_edge_df, paste0(getwd(),"/processed-data/",reg,'_absolute_SE_vast_edge_df.rds'))
+  
 }# end of parallel
 
 ########################
@@ -378,14 +390,3 @@ for(i in 1:length(Regions)){
 capture.output( settings, file=file.path(RegionFile,'settings.txt'))
 
 # edge dfs
-
-  rel_edge_files <- list.files(path=RegionFile, pattern="relative_SE_edges.csv", full.names=TRUE)
-  rel_edge_df <- dplyr::bind_rows(lapply(rel_edge_files, read.csv))
-  rel_edge_df$X <- NULL
-  saveRDS(rel_edge_df, paste0(getwd(),"/processed-data/",reg,'_relative_SE_vast_edge_df.rds'))
-
-  abs_edge_files <- list.files(path=RegionFile, pattern="absolute_SE_edges.csv", full.names=TRUE)
-  abs_edge_df <- dplyr::bind_rows(lapply(abs_edge_files, read.csv))
-  abs_edge_df$X <- NULL
-  saveRDS(abs_edge_df, paste0(getwd(),"/processed-data/",reg,'_absolute_SE_vast_edge_df.rds'))
-  

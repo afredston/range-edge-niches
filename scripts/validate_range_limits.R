@@ -1,10 +1,12 @@
 # IDENTIFY WHICH SPECIES HAVE RANGE EDGES IN EACH REGION
 # currently just using a distance buffer 
 library(tidyverse)
+library(magrittr)
 library(here)
 
 # choose buffer size and SE type from VAST output
 km.buffer <- 150
+# se.buffer <- 200
 
 SEoptions <- c("relative","absolute")
 SEtype <- SEoptions[1]
@@ -13,44 +15,43 @@ SEtype <- SEoptions[1]
 # import and harmonize species dfs
 ##################
 
-# spp.classes <- read_csv(here("processed-data","spp_taxonomy.csv")) %>%
-#   select(query, Class) %>%
-#   distinct()
+# get taxonomy to bind to edge df at the end
+spp.taxonomy <- read_csv(here("processed-data","spp_taxonomy.csv")) %>%
+  select(query, Class) %>%
+  distinct()
 
 # reformat VAST output 
-ebs.df <- if(SEtype=="relative"){readRDS(here("processed-data","ebs_relative_SE_vast_edge_df.rds"))
-}else{readRDS(here("processed-data","ebs_absolute_SE_vast_edge_df.rds"))} %>%
+ebs.vast <- if(SEtype=="relative"){readRDS(here("processed-data","ebs_relative_SE_vast_edge_df.rds"))
+}else{readRDS(here("processed-data","ebs_absolute_SE_vast_edge_df.rds"))} 
+
+ebs.df <- ebs.vast %>%
   filter(!quantile=="quantile_0.5") %>% # get rid of centroid 
   mutate(species = gsub("_", " ", species),
          species=tolower(species)) %>% # harmonize name format 
   pivot_wider(names_from=quantity, values_from=value ) %>%
-  rename("Std.Error"=`Std. Error`)
+  rename("Std.Error"=`Std. Error`)  
 
-neus.df <- if(SEtype=="relative"){readRDS(here("processed-data","neus_relative_SE_vast_edge_df.rds"))
-}else{readRDS(here("processed-data","neus_absolute_SE_vast_edge_df.rds"))} %>%
+neus.vast <- if(SEtype=="relative"){readRDS(here("processed-data","neus_relative_SE_vast_edge_df.rds"))
+}else{readRDS(here("processed-data","neus_absolute_SE_vast_edge_df.rds"))}
+
+neus.df <- neus.vast %>%
   filter(!quantile=="quantile_0.5") %>%
   mutate(species = gsub("_", " ", species),
          species=tolower(species)) %>%
   pivot_wider(names_from=quantity, values_from=value ) %>%
-  rename("Std.Error"=`Std. Error`)
-
-testplot1 <- neus.df %>% 
-  filter(species==tmp$species[1]) %>%
-  mutate(axis=as.character(axis)) %>%
-  filter(axis=="coast_km") %>% 
-  ggplot(aes(x=year, y=Estimate))+ 
-  geom_point() + 
-  geom_line() + 
-  geom_errorbar(aes(x=year, ymin=Estimate-Std.Error, ymax=Estimate+Std.Error))
+  rename("Std.Error"=`Std. Error`) 
                                                           
-wc.df <- readRDS(here("processed-data","wc_vast_edge_df.rds")) %>%
+wc.vast <- if(SEtype=="relative"){readRDS(here("processed-data","wc_relative_SE_vast_edge_df.rds"))
+}else{readRDS(here("processed-data","wc_absolute_SE_vast_edge_df.rds"))} 
+
+wc.df <- wc.vast %>%
   filter(!quantile=="quantile_0.5") %>%
   mutate(species = gsub("_", " ", species),
          species=tolower(species)) %>%
   pivot_wider(names_from=quantity, values_from=value ) %>%
   rename("Std.Error"=`Std. Error`) 
 
-# identify range edge species
+# get bounds of each region
 ebs.maxnw <- max(ebs.df[ebs.df$axis=="NW_km",]$Estimate)
 ebs.minnw <- min(ebs.df[ebs.df$axis=="NW_km",]$Estimate)
 
@@ -60,6 +61,7 @@ neus.minUp <- min(neus.df[neus.df$axis=="coast_km",]$Estimate)
 wc.maxUp <- max(wc.df[wc.df$axis=="coast_km",]$Estimate)
 wc.minUp <- min(wc.df[wc.df$axis=="coast_km",]$Estimate)
 
+# identify range edge species along relevant axis 
 ebs.nw.edges <- ebs.df %>%
   filter(axis=="NW_km",
          quantile%in%c("quantile_0.95","quantile_0.05")) %>%
@@ -96,6 +98,7 @@ wc.coast.edges <- wc.df %>%
   mutate(edgecheck = between(meanedge, wc.minUp+km.buffer, wc.maxUp-km.buffer)) %>%
   filter(edgecheck==TRUE)
 
+# which species have which edges?
 wc.coast.pol.spp <- wc.coast.edges %>%
   filter(quantile=="quantile_0.95") %>%
   pull(unique(species)) 
@@ -120,6 +123,7 @@ ebs.nw.eq.spp <- ebs.nw.edges %>%
   filter(quantile=="quantile_0.05") %>%
   pull(unique(species))
 
+# label edges by edge type, and keep only estimates of the relevant quantile (e.g., throw out 0.05 quantile for cold edges)
 ebs.prep <- ebs.df %>% 
   mutate(region="ebs") %>% # add columns for binding later 
   filter(!quantile=="quantile_0.5") %>%
@@ -135,8 +139,8 @@ neus.prep <- neus.df %>%
   filter(!quantile=="quantile_0.5") %>%
   rowwise() %>%
   mutate(edgetype=ifelse(species %in% neus.coast.pol.spp & species %in% neus.coast.eq.spp, "both", ifelse(species %in% neus.coast.pol.spp, "coldedge", ifelse(species%in% neus.coast.eq.spp, "warmedge", "neither")))) %>%
-  filter(!edgetype=="neither") %>% # keep only rows with estimates from the range edge, whichever it is
-  mutate(ref = ifelse(edgetype=="coldedge" & quantile=="quantile_0.95", "keep", ifelse(edgetype=="warmedge" & quantile=="quantile_0.05","keep",ifelse(edgetype=="both","keep","drop")))) %>% # keep only quantiles matching the relevant edges 
+  filter(!edgetype=="neither") %>% 
+  mutate(ref = ifelse(edgetype=="coldedge" & quantile=="quantile_0.95", "keep", ifelse(edgetype=="warmedge" & quantile=="quantile_0.05","keep",ifelse(edgetype=="both","keep","drop")))) %>% 
   filter(ref=="keep") %>%
   select(-ref)
 
@@ -145,14 +149,46 @@ wc.prep <- wc.df %>%
   filter(!quantile=="quantile_0.5") %>%
   rowwise() %>%
   mutate(edgetype=ifelse(species %in% wc.coast.pol.spp & species %in% wc.coast.eq.spp, "both", ifelse(species %in% wc.coast.pol.spp, "coldedge", ifelse(species%in% wc.coast.eq.spp, "warmedge", "neither")))) %>%
-  filter(!edgetype=="neither") %>% # keep only rows with estimates from the range edge, whichever it is
+  filter(!edgetype=="neither") %>% 
   mutate(ref = ifelse(edgetype=="coldedge" & quantile=="quantile_0.95", "keep", ifelse(edgetype=="warmedge" & quantile=="quantile_0.05","keep",ifelse(edgetype=="both","keep","drop")))) %>%
   filter(ref=="keep") %>%
   select(-ref)
 
 dat <- rbind(wc.prep, neus.prep, ebs.prep) %>%
   left_join(spp.taxonomy, by=c("species"="query")) %>%
-  mutate(taxongroup = ifelse(class %in% c("Teleostei","Chondrichthyes"),"fish","invertebrates"))
+  mutate(taxongroup = ifelse(Class %in% c("Actinopterygii","Elasmobranchii"),"fish","invertebrates"))
+
+# try Wald test (Jim's idea)
+# need to expand all combinations of years 
+dat_complete <- dat %>%
+  select(-taxongroup, -edgetype, -Class) %>%
+  group_by(quantile, species, region, axis) %>%
+  mutate(year_compare = year,
+         Estimate_compare = Estimate,
+         Std.Error_compare = Std.Error
+  ) %>%
+  complete(year, year_compare) %>%
+  ungroup() %>% # this produces rows with the full factorial combinations of all years, but doesn't fill in the estimate and SE columns 
+group_by(quantile, species, region, axis, year)  %>%
+  fill(c(Estimate, Std.Error), .direction="downup") %>% # the direction command tells it to look anywhere in the grouped df for the value--could be above or below the row in question
+  ungroup() %>%
+  group_by(quantile, species, region, axis, year_compare)  %>%
+  fill(c(Estimate_compare, Std.Error_compare), .direction="downup") %>%  
+  ungroup() %>%
+  filter(!year==year_compare) %>% # get rid of rows where we're comparing the same years 
+  rowwise() %>%
+  mutate(mu.diff = Estimate - Estimate_compare, 
+         se.diff = sqrt(Std.Error^2+Std.Error_compare^2),
+         Zscore = mu.diff / se.diff,
+         p.val = (1-pnorm(abs(Zscore)))/2
+         ) %>% # use Wald test to get a p-value for each set of pairs 
+  group_by(quantile, species, region, axis) %>%
+  mutate(wald.signif = ifelse(min(p.val)<=0.1, "Y","N")) %>%
+  ungroup() %>%
+  select(quantile, species, region, axis, wald.signif) %>%
+  distinct()
+
+dat %<>% left_join(dat_complete)
 
 saveRDS(dat, here("processed-data","all_edge_spp_df.rds"))
 rm(list=ls())
