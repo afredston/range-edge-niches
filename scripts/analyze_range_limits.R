@@ -17,7 +17,7 @@ library(tidybayes)
 ### load data 
 #######################
 
-# NEED TO RE-RUN VALIDATE_EDGE_SPP AFTER RE-RUNNING VAST!
+# DON'T FORGET TO RE-RUN VALIDATE_EDGE_SPP AFTER RE-RUNNING VAST!
 dat.models <- readRDS(here("processed-data","all_edge_spp_df.rds")) %>%
   filter(axis %in% c('coast_km','NW_km')) %>%
   ungroup()
@@ -46,9 +46,9 @@ dat.models.groups <- dat.models %>%
          region=as.factor(region),
          taxongroup=as.factor(taxongroup))
 
-# prep data for models
+# prep explanatory variables for models using region-wide change in T 
 
-ebs.oisst.summary <- read_rds(here("processed-data","ebs_oisst_rotated.rds")) %>% 
+ebs.sst.summary <- read_rds(here("processed-data","ebs_sst_rotated.rds")) %>% 
   group_by(year_match, month, lat, lon) %>%
   mutate(sst.month.mean = mean(sst)) %>% # calculate monthly means
   ungroup() %>%
@@ -61,7 +61,11 @@ ebs.oisst.summary <- read_rds(here("processed-data","ebs_oisst_rotated.rds")) %>
   distinct() %>%
   mutate(region="ebs")
 
-wc.oisst.summary <- read_rds(here("processed-data","wc.oisst.coastdist.rds")) %>% 
+# ebs.sst.scalemean = mean(ebs.sst.summary$mean.annual.sst)
+# ebs.sst.scalesd = sd(ebs.sst.summary$mean.annual.sst)
+# ebs.sst.summary$mean.annual.sst.scale <- (ebs.sst.summary$mean.annual.sst-ebs.sst.scalemean)/ebs.sst.scalesd
+
+wc.sst.summary <- read_rds(here("processed-data","wc_sst_coastdist.rds")) %>% 
   rename(lon="x",lat="y") %>%
   group_by(year_match, month, lat, lon) %>%
   mutate(sst.month.mean = mean(sst)) %>% # calculate monthly means
@@ -75,7 +79,11 @@ wc.oisst.summary <- read_rds(here("processed-data","wc.oisst.coastdist.rds")) %>
   distinct() %>%
   mutate(region="wc")
 
-neus.hadisst.summary <- read_rds(here("processed-data","neus.hadisst.coastdist.rds")) %>% 
+# wc.sst.scalemean = mean(wc.sst.summary$mean.annual.sst)
+# wc.sst.scalesd = sd(wc.sst.summary$mean.annual.sst)
+# wc.sst.summary$mean.annual.sst.scale <- (wc.sst.summary$mean.annual.sst-wc.sst.scalemean)/wc.sst.scalesd
+
+neus.sst.summary <- read_rds(here("processed-data","neus_sst_coastdist.rds")) %>% 
   rename(lon="x",lat="y") %>%
   group_by(year_match, lat, lon) %>%
   mutate(cell.annual.sst = mean(sst)) %>% # calculate annual mean of monthly SSTs for each grid cell
@@ -86,13 +94,13 @@ neus.hadisst.summary <- read_rds(here("processed-data","neus.hadisst.coastdist.r
   distinct() %>%
   mutate(region="neus")
 
-dat.sst <- rbind(neus.hadisst.summary, wc.oisst.summary, ebs.oisst.summary)
+dat.sst.summary <- rbind(neus.sst.summary, wc.sst.summary, ebs.sst.summary)
 
-dat.edges.sst <- dat.models %>%
-  left_join(dat.sst, by=c("region","year"="year_match"))
+dat.edges.sst.summary <- dat.models %>%
+  left_join(dat.sst.summary, by=c("region","year"="year_match"))
 
 #######################
-### single-species Bayesian models
+### single-species Bayesian models of edge position ~ regional T or time 
 #######################
 # spp.lms <- dat.edges.sst %>%
 #   filter(axis %in% c('coast_km','NW_km')) %>%
@@ -108,12 +116,12 @@ dat.edges.sst <- dat.models %>%
 
 # species shifts vs T 
 spp.bayes.sst.lm.df <- NULL
-for(i in unique(dat.edges.sst$species)) {
-  dfprep1 <- dat.edges.sst[dat.edges.sst$species==i,] # subdivide by species 
+for(i in unique(dat.edges.sst.summary$species)) {
+  dfprep1 <- dat.edges.sst.summary[dat.edges.sst.summary$species==i,] # subdivide by species 
   for(j in unique(dfprep1$region)) {
-    dfprep2 <- dat.edges.sst[dat.edges.sst$species==i & dat.edges.sst$region==j,] # subdivide by region, for the few spp found in multiple regions 
+    dfprep2 <- dat.edges.sst.summary[dat.edges.sst.summary$species==i & dat.edges.sst.summary$region==j,] # subdivide by region, for the few spp found in multiple regions 
     for(k in unique(dfprep2$quantile)) {
-      df <- dat.edges.sst[dat.edges.sst$species==i & dat.edges.sst$region==j & dat.edges.sst$quantile==k,] # subdivide by quantile, for the few spp with both range edges
+      df <- dat.edges.sst.summary[dat.edges.sst.summary$species==i & dat.edges.sst.summary$region==j & dat.edges.sst.summary$quantile==k,] # subdivide by quantile, for the few spp with both range edges
       spp.bayes.lm <- try(stan_glm(Estimate ~ mean.annual.sst, 
                                    data=df, 
                                    family=gaussian(), 
@@ -122,7 +130,7 @@ for(i in unique(dat.edges.sst$species)) {
                                    adapt_delta = 0.95,
                                    chains = 4,
                                    cores = 1,
-                                   prior = normal()))
+                                   prior = normal(0, 1000))) # Burrows paper reports temperature spatial gradients up to 0.02 degrees C / km. taking the inverse, this could range from 50km shift for degree C up to 1000 km or higher. centering on 0 because relationship is not necessarily positive for all species. 
       if(!class(spp.bayes.lm)[1] == "try-error") { # adding try() here because some edges are so invariant that the model fails 
         spp.bayes.lm.tidy <- tidy_draws(spp.bayes.lm) %>%
           mutate(species = paste0(i),
@@ -184,7 +192,7 @@ for(i in unique(dat.models$species)) {
                                    adapt_delta = 0.95,
                                    chains = 4,
                                    cores = 1,
-                                   prior = normal()))
+                                   prior = normal(0, 100))) # centered on 0 to allow negative coefficients for some species. SD of 100 makes it pretty flat but still bounds to a reasonable order of magnitude in km/yr
       if(!class(spp.bayes.lm)[1] == "try-error") { # adding try() here because some edges are so invariant that the model fails 
         spp.bayes.lm.tidy <- tidy_draws(spp.bayes.lm) %>%
           mutate(species = paste0(i),
@@ -256,12 +264,12 @@ bayes.lm.time.edgetype.stats <- spp.bayes.lm.df %>%
 # split by region because temp datasets are different
 
 # set up temp data
-ebs.oisst.rotated <- readRDS(here("processed-data","ebs_oisst_rotated.rds"))
-wc.oisst.coastdist <- readRDS(here("processed-data","wc.oisst.coastdist.rds"))
-neus.hadisst.coastdist <- readRDS(here("processed-data","neus.hadisst.coastdist.rds"))
+ebs.sst <- readRDS(here("processed-data","ebs_sst_rotated.rds"))
+wc.sst <- readRDS(here("processed-data","wc_sst_coastdist.rds"))
+neus.sst <- readRDS(here("processed-data","neus_sst_coastdist.rds"))
 
 # note that daily datasets are converted into monthly means for comparability among regions 
-ebs.oisst.NWprep <- ebs.oisst.rotated %>% 
+ebs.sst.prepgam <- ebs.sst %>% 
   group_by(N_km, E_km, month) %>%
   mutate(cell.month.mean=mean(sst)) %>%
   ungroup() %>%
@@ -274,7 +282,7 @@ ebs.oisst.NWprep <- ebs.oisst.rotated %>%
   distinct() %>%
   mutate(year_match = as.factor(year_match)) 
 
-wc.oisst.prepgam <- wc.oisst.coastdist %>% 
+wc.sst.prepgam <- wc.sst %>% 
   group_by(x, y, month) %>%
   mutate(cell.month.mean = mean(sst)) %>%
   group_by(coast_km, year_match) %>%
@@ -286,7 +294,7 @@ wc.oisst.prepgam <- wc.oisst.coastdist %>%
   distinct() %>%
   mutate(year_match = as.factor(year_match)) 
 
-neus.hadisst.prepgam <- neus.hadisst.coastdist %>% 
+neus.sst.prepgam <- neus.sst %>% 
   group_by(coast_km, year_match) %>%
   mutate(sstmean = mean(sst),
          sstmax = max(sst),
@@ -296,23 +304,23 @@ neus.hadisst.prepgam <- neus.hadisst.coastdist %>%
   distinct() %>%
   mutate(year_match = as.factor(year_match)) 
 
-# set up GAMs
-ebs.oisst.nw.temp.gam.mean <- gam(sstmean ~ year_match + s(NW_km, by=year_match), data=ebs.oisst.NWprep)
-ebs.oisst.nw.temp.gam.99 <- gam(sstmax ~ year_match + s(NW_km, by=year_match), data=ebs.oisst.NWprep)
-ebs.oisst.nw.temp.gam.01 <- gam(sstmin ~ year_match + s(NW_km, by=year_match), data=ebs.oisst.NWprep)
+# set up GAMs for coastal and NW axes 
+ebs.sst.temp.gam.mean <- gam(sstmean ~ year_match + s(NW_km, by=year_match), data=ebs.sst.prepgam)
+ebs.sst.temp.gam.99 <- gam(sstmax ~ year_match + s(NW_km, by=year_match), data=ebs.sst.prepgam)
+ebs.sst.temp.gam.01 <- gam(sstmin ~ year_match + s(NW_km, by=year_match), data=ebs.sst.prepgam)
 
-wc.oisst.temp.gam.mean <- gam(sstmean ~ year_match + s(coast_km, by=year_match), data=wc.oisst.prepgam)
-wc.oisst.temp.gam.99 <- gam(sstmax ~ year_match + s(coast_km, by=year_match), data=wc.oisst.prepgam)
-wc.oisst.temp.gam.01 <- gam(sstmin ~ year_match + s(coast_km, by=year_match), data=wc.oisst.prepgam)
+wc.sst.temp.gam.mean <- gam(sstmean ~ year_match + s(coast_km, by=year_match), data=wc.sst.prepgam)
+wc.sst.temp.gam.99 <- gam(sstmax ~ year_match + s(coast_km, by=year_match), data=wc.sst.prepgam)
+wc.sst.temp.gam.01 <- gam(sstmin ~ year_match + s(coast_km, by=year_match), data=wc.sst.prepgam)
 
-neus.hadisst.temp.gam.mean <- gam(sstmean ~ year_match + s(coast_km, by=year_match), data=neus.hadisst.prepgam)
-neus.hadisst.temp.gam.99 <- gam(sstmax ~ year_match + s(coast_km, by=year_match), data=neus.hadisst.prepgam)
-neus.hadisst.temp.gam.01 <- gam(sstmin ~ year_match + s(coast_km, by=year_match), data=neus.hadisst.prepgam)
+neus.sst.temp.gam.mean <- gam(sstmean ~ year_match + s(coast_km, by=year_match), data=neus.sst.prepgam)
+neus.sst.temp.gam.99 <- gam(sstmax ~ year_match + s(coast_km, by=year_match), data=neus.sst.prepgam)
+neus.sst.temp.gam.01 <- gam(sstmin ~ year_match + s(coast_km, by=year_match), data=neus.sst.prepgam)
 
 # predict temp from edge position--prep datasets
-ebs.minyear <- min(ebs.oisst.rotated$year_match)
-wc.minyear <- min(wc.oisst.coastdist$year_match)
-neus.minyear <- min(neus.hadisst.coastdist$year_match)
+ebs.minyear <- min(ebs.sst$year_match)
+wc.minyear <- min(wc.sst$year_match)
+neus.minyear <- min(neus.sst$year_match)
 
 ebs.pred <- dat.models %>%
   filter(region=="ebs",
@@ -336,26 +344,26 @@ neus.pred <- dat.models %>%
          year_match=year) 
 
 # add columns with predicted temperature at edge every year 
-ebs.pred$predict.sstmean <- predict.gam(ebs.oisst.nw.temp.gam.mean, ebs.pred)
-ebs.pred$predict.sstmean.se <- predict.gam(ebs.oisst.nw.temp.gam.mean, ebs.pred, se.fit=TRUE)$se.fit
-ebs.pred$predict.sstmax <- predict.gam(ebs.oisst.nw.temp.gam.99, ebs.pred)
-ebs.pred$predict.sstmax.se <- predict.gam(ebs.oisst.nw.temp.gam.99, ebs.pred,se.fit=TRUE)$se.fit
-ebs.pred$predict.sstmin <- predict.gam(ebs.oisst.nw.temp.gam.01, ebs.pred)
-ebs.pred$predict.sstmin.se <- predict.gam(ebs.oisst.nw.temp.gam.01, ebs.pred,se.fit=TRUE)$se.fit
+ebs.pred$predict.sstmean <- predict.gam(ebs.sst.temp.gam.mean, ebs.pred)
+ebs.pred$predict.sstmean.se <- predict.gam(ebs.sst.temp.gam.mean, ebs.pred, se.fit=TRUE)$se.fit
+ebs.pred$predict.sstmax <- predict.gam(ebs.sst.temp.gam.99, ebs.pred)
+ebs.pred$predict.sstmax.se <- predict.gam(ebs.sst.temp.gam.99, ebs.pred,se.fit=TRUE)$se.fit
+ebs.pred$predict.sstmin <- predict.gam(ebs.sst.temp.gam.01, ebs.pred)
+ebs.pred$predict.sstmin.se <- predict.gam(ebs.sst.temp.gam.01, ebs.pred,se.fit=TRUE)$se.fit
 
-wc.pred$predict.sstmean <- predict.gam(wc.oisst.temp.gam.mean, wc.pred)
-wc.pred$predict.sstmean.se <- predict.gam(wc.oisst.temp.gam.mean, wc.pred, se.fit=TRUE)$se.fit
-wc.pred$predict.sstmax <- predict.gam(wc.oisst.temp.gam.99, wc.pred)
-wc.pred$predict.sstmax.se <- predict.gam(wc.oisst.temp.gam.99, wc.pred,se.fit=TRUE)$se.fit
-wc.pred$predict.sstmin <- predict.gam(wc.oisst.temp.gam.01, wc.pred)
-wc.pred$predict.sstmin.se <- predict.gam(wc.oisst.temp.gam.01, wc.pred, se.fit=TRUE)$se.fit
+wc.pred$predict.sstmean <- predict.gam(wc.sst.temp.gam.mean, wc.pred)
+wc.pred$predict.sstmean.se <- predict.gam(wc.sst.temp.gam.mean, wc.pred, se.fit=TRUE)$se.fit
+wc.pred$predict.sstmax <- predict.gam(wc.sst.temp.gam.99, wc.pred)
+wc.pred$predict.sstmax.se <- predict.gam(wc.sst.temp.gam.99, wc.pred,se.fit=TRUE)$se.fit
+wc.pred$predict.sstmin <- predict.gam(wc.sst.temp.gam.01, wc.pred)
+wc.pred$predict.sstmin.se <- predict.gam(wc.sst.temp.gam.01, wc.pred, se.fit=TRUE)$se.fit
 
-neus.pred$predict.sstmean <- predict.gam(neus.hadisst.temp.gam.mean, neus.pred)
-neus.pred$predict.sstmean.se <- predict.gam(neus.hadisst.temp.gam.mean, neus.pred, se.fit=TRUE)$se.fit
-neus.pred$predict.sstmax <- predict.gam(neus.hadisst.temp.gam.99, neus.pred)
-neus.pred$predict.sstmax.se <- predict.gam(neus.hadisst.temp.gam.99, neus.pred, se.fit=TRUE)$se.fit
-neus.pred$predict.sstmin <- predict.gam(neus.hadisst.temp.gam.01, neus.pred)
-neus.pred$predict.sstmin.se <- predict.gam(neus.hadisst.temp.gam.01, neus.pred, se.fit=TRUE)$se.fit
+neus.pred$predict.sstmean <- predict.gam(neus.sst.temp.gam.mean, neus.pred)
+neus.pred$predict.sstmean.se <- predict.gam(neus.sst.temp.gam.mean, neus.pred, se.fit=TRUE)$se.fit
+neus.pred$predict.sstmax <- predict.gam(neus.sst.temp.gam.99, neus.pred)
+neus.pred$predict.sstmax.se <- predict.gam(neus.sst.temp.gam.99, neus.pred, se.fit=TRUE)$se.fit
+neus.pred$predict.sstmin <- predict.gam(neus.sst.temp.gam.01, neus.pred)
+neus.pred$predict.sstmin.se <- predict.gam(neus.sst.temp.gam.01, neus.pred, se.fit=TRUE)$se.fit
 
 neus.pred <- rename(neus.pred, edge_position=coast_km)
 neus.pred$axis <- "coast_km"
@@ -436,7 +444,7 @@ for(i in unique(dat.predict.niche$species)) {
                                      adapt_delta = 0.99,
                                      chains = 4,
                                      cores = 1,
-                                     prior = normal(),
+                                     prior = normal(0, 2), # relatively flat but constrained, SST vs year is often order 0.1
                                      control = list(max_treedepth = 20)))
         if(!class(spp.bayes.lm)[1] == "try-error") { # adding try() here because some edges are so invariant that the model fails 
           spp.bayes.lm.tidy <- tidy_draws(spp.bayes.lm) %>%
@@ -462,7 +470,7 @@ spp.bayes.niche.filter <- spp.bayes.niche.lm.df %>%
   mutate(max.rhat = max(intercept.rhat, year_match.rhat, sigma.rhat)) %>%
   filter(max.rhat <= 1.1) # get rid of spp*region*edge combos where one of the SST extreme models didn't converge
 
-setdiff(spp.bayes.niche.lm.df %>% select(region, species, quantile) %>% distinct(), spp.bayes.niche.filter %>% select(region, species, quantile) %>% distinct()) # just one row removed: neptunea lyrata, ebs, cold edge
+setdiff(spp.bayes.niche.lm.df %>% select(region, species, quantile) %>% distinct(), spp.bayes.niche.filter %>% select(region, species, quantile) %>% distinct()) # removes 3 rows all EBS
 
 spp.bayes.niche.lm.stats <- spp.bayes.niche.filter %>% 
   group_by(.draw, species, region, quantile, predicted.var) %>%
@@ -700,251 +708,3 @@ ggsave(ex.spp.bayes.gg3, dpi=160, width=4, height=4, filename=here("results","ex
 ggsave(ex.spp.time.gg1, dpi=160, width=4, height=4, filename=here("results","example_1_niche.png"))
 ggsave(ex.spp.time.gg2, dpi=160, width=4, height=4, filename=here("results","example_2_niche.png"))
 ggsave(ex.spp.time.gg3, dpi=160, width=4, height=4, filename=here("results","example_3_niche.png"))
-
-############### 
-# test for edge thermal niche change over time 
-
-# dat.predict.lms <- dat.predict %>%
-#   group_by(species, region, quantile, predicted.var) %>%
-#   filter(!predicted.var=="predict.sstmean") %>%
-#   nest() %>%
-#   mutate(model=purrr::map(data, ~lm(sst~year_match, data=.x)),
-#          tidymodel=purrr::map(model, tidy)) %>%
-#   unnest(tidymodel) %>% 
-#   ungroup() %>%
-#   filter(!term=="(Intercept)") %>%
-#   select(-data, -model)
-#  
-# clusters <- kmeans(dat.predict.lms[dat.predict.lms$p.value>0.05,]$std.error, centers=2)
-# 
-# zero.slopes <- dat.predict.lms %>%
-#   filter(p.value > 0.05) %>%
-#   add_column(clusterID=clusters$cluster) %>%
-#   group_by(clusterID) %>%
-#   mutate(clustermean = mean(std.error)) %>%
-#   ungroup() %>%
-#   mutate(group = ifelse(clusterID==2, "zeroSlope_lowSE","zeroSlope_highSE")) %>%
-#   select(species, region, predicted.var, quantile, clustermean, group)
-# 
-# # gives 2 rows to each species--one for each thermal extreme 
-# dat.thermal.niche <- dat.predict.lms %>%
-#   left_join(zero.slopes, by=c("species","region","predicted.var","quantile")) %>%
-#   mutate(group=replace_na(group, "nonzeroSlope"))
-# 
-# dat.thermal.niche.grouped <- dat.thermal.niche %>% 
-#   group_by(species, quantile, region) %>%
-#   mutate(spp.biogeo.class = ifelse("zeroSlope_lowSE" %in% group, "Fast Temperature Tracker", ifelse("zeroSlope_highSE" %in% group, "Lagged Temperature Tracker","Non Temperature Tracker"))) %>% # classify by range edge type, not by temperature extreme
-#   ungroup() %>% 
-#   select(-term, -clustermean, -statistic, -group) %>%
-#   pivot_wider(values_from=c(estimate, std.error, p.value), names_from = predicted.var)
-# 
-# thermal.niche.summary <- dat.thermal.niche.grouped %>% 
-#   group_by(spp.biogeo.class) %>%
-#   summarise(n=n())
-# 
-# dat.thermal.gg <- dat.thermal.niche.grouped %>%
-#   mutate(region=factor(region, levels=c('neus','wc','ebs'),),
-#          region=recode(region,
-#                        ebs="Eastern Bering Sea",
-#                        neus="Northeast",
-#                        wc="West Coast")) %>%
-#   ggplot(aes(x=estimate_predict.sstmin, y=estimate_predict.sstmax, group=spp.biogeo.class)) +
-#   geom_point(aes(shape=spp.biogeo.class, color=spp.biogeo.class, fill=spp.biogeo.class)) +
-#   scale_color_manual(values = c("Non Temperature Tracker"="#fb8072","Fast Temperature Tracker"="deepskyblue4","Lagged Temperature Tracker"="mediumpurple3")) +
-#   geom_errorbar(aes(x=estimate_predict.sstmin, ymin=estimate_predict.sstmax-std.error_predict.sstmax, ymax=estimate_predict.sstmax+std.error_predict.sstmax, color=spp.biogeo.class)) +
-#   geom_errorbarh(aes(y=estimate_predict.sstmax, xmin=estimate_predict.sstmin-std.error_predict.sstmin, xmax=estimate_predict.sstmin+std.error_predict.sstmin, color=spp.biogeo.class)) +
-#   geom_vline(xintercept=0, linetype="dashed") +
-#   geom_hline(yintercept=0, linetype="dashed") +
-#   theme_bw() +
-#   labs(x="Change in Cold Extreme at Edge (°C/year)", y="Change in Warm Extreme at Edge (°C/year)") +
-# facet_wrap(~region) +
-#   theme(legend.position = "bottom",
-#         legend.title = element_blank()) +
-#   NULL
-# dat.thermal.gg
-# ggsave(dat.thermal.gg, filename=here("results","thermal_niche_time_coefficients.png"),dpi=160, width=10, height=4)
-# 
-# #######################
-# ### are range limits also niche limits? 
-# #######################
-# # many species did have a significant change in max SST over time, but with a very small effect size, so I think it's fine to use time-series means. 
-# wc.niche <- readRDS(here("processed-data","wc_niche.rds")) %>%
-#   pivot_longer(cols=c('spp.sst.mean','spp.sst.max','spp.sst.min'), names_to="sstvar", values_to="sst") %>%
-#   group_by(species, sstvar) %>% 
-#   mutate(niche.sst.mean = mean(sst),
-#          niche.sst.sd = sd(sst)) %>%
-#   ungroup() %>%
-#   select(species, niche.sst.mean, niche.sst.sd, sstvar) %>%
-#   distinct() %>%
-#   mutate(region="wc",
-#          sstvar=recode(sstvar, 
-#          spp.sst.mean="sst.mean",
-#          spp.sst.max="sst.max",
-#          spp.sst.min="sst.min"),
-#          species = tolower(gsub("_"," ",species)))
-# 
-# neus.niche <- readRDS(here("processed-data","neus_niche.rds")) %>%
-#   pivot_longer(cols=c('spp.sst.mean','spp.sst.max','spp.sst.min'), names_to="sstvar", values_to="sst") %>%
-#   group_by(species, sstvar) %>% 
-#   mutate(niche.sst.mean = mean(sst, na.rm=TRUE),
-#          niche.sst.sd = sd(sst, na.rm=TRUE)) %>%
-#   ungroup() %>%
-#   select(species, niche.sst.mean, niche.sst.sd, sstvar) %>%
-#   distinct() %>%
-#   mutate(region="neus",
-#          sstvar=recode(sstvar, 
-#                        spp.sst.mean="sst.mean",
-#                        spp.sst.max="sst.max",
-#                        spp.sst.min="sst.min"),
-#          species = tolower(gsub("_"," ",species)))
-# 
-# ebs.niche <- readRDS(here("processed-data","ebs_niche.rds")) %>%
-#   pivot_longer(cols=c('spp.sst.mean','spp.sst.max','spp.sst.min'), names_to="sstvar", values_to="sst") %>%
-#   group_by(species, sstvar) %>% 
-#   mutate(niche.sst.mean = mean(sst, na.rm=TRUE),
-#          niche.sst.sd = sd(sst, na.rm=TRUE)) %>%
-#   ungroup() %>%
-#   select(species, niche.sst.mean, niche.sst.sd, sstvar) %>%
-#   distinct() %>%
-#   mutate(region="ebs",
-#          sstvar=recode(sstvar, 
-#                        spp.sst.mean="sst.mean",
-#                        spp.sst.max="sst.max",
-#                        spp.sst.min="sst.min"),
-#          species = tolower(gsub("_"," ",species)))
-# 
-# dat.niche <- rbind(wc.niche, neus.niche, ebs.niche)
-# 
-# # only use species with a range edge in the region based on dat.predict 
-# dat.predict.means <- dat.predict %>%
-#   rename("sstvar"=predicted.var) %>%
-#   group_by(species, region, quantile, sstvar) %>%
-#   mutate(edge.sst.mean = mean(sst),
-#          edge.sst.sd = sd(sst)) %>%
-#   ungroup() %>%
-#   select(species, region, quantile, sstvar, edge.sst.mean, edge.sst.sd) %>%
-#   distinct() %>%
-#   mutate(
-#          sstvar=recode(sstvar, 
-#                        predict.sstmean="sst.mean",
-#                        predict.sstmax="sst.max",
-#                        predict.sstmin="sst.min")) %>%
-#   left_join(dat.niche, by=c("region","species","sstvar"))
-# 
-# ebs.niche.gg <- dat.predict %>%
-#   filter(region=="ebs") %>%
-#   ggplot(aes(x=year_match, y=sst, group=predicted.var))+
-#   geom_line(aes(color=predicted.var)) + 
-# facet_wrap(~species) 
-# 
-# wc.niche.gg <- dat.predict %>%
-#   filter(region=="wc") %>%
-#   ggplot(aes(x=year_match, y=sst, group=predicted.var))+
-#   geom_line(aes(color=predicted.var)) + 
-#   facet_wrap(~species) 
-# 
-# neus.niche.gg <- dat.predict %>%
-#   filter(region=="neus") %>%
-#   ggplot(aes(x=year_match, y=sst, group=predicted.var))+
-#   geom_line(aes(color=predicted.var)) + 
-#   facet_wrap(~species) 
-# 
-# cold.niche.r2 <- summary(lm(edge.sst.mean~niche.sst.mean, 
-#                             data=dat.predict.means %>%
-#                filter(quantile=="quantile_0.95",
-#                       sstvar=="sst.min")))$r.squared
-# cold.niche.r2.exp <- paste("R^2 == ", round(cold.niche.r2,2))
-# 
-# cold.niche.gg <- dat.predict.means %>%
-#   filter(quantile=="quantile_0.95",
-#          sstvar=="sst.min") %>%
-#   ggplot(aes(x=niche.sst.mean, y=edge.sst.mean)) +
-#   geom_point() +
-#   geom_errorbarh(aes(xmin=niche.sst.mean-niche.sst.sd, xmax=niche.sst.mean+niche.sst.sd)) +
-#   geom_errorbar(aes(ymin=edge.sst.mean-edge.sst.sd, ymax=edge.sst.mean+edge.sst.sd)) +
-#   annotate(geom="text",label=cold.niche.r2.exp, x=11, y=13.5, parse=TRUE, size=5) +
-#   geom_abline(slope=1, intercept=0,linetype="dashed") +
-#   scale_x_continuous(limits=c(-2, 15)) + 
-#   scale_y_continuous(limits=c(-2, 15)) + 
-#   labs(x="Range Cold Extreme (°C)", y="Edge Cold Extreme (°C)", title="Cold Range Limits") +
-#   theme_bw() +
-#   theme(text=element_text(family="sans",size=12,color="black"),
-#         legend.position="none",
-#         axis.text=element_text(family="sans",size=8,color="black"), 
-#         axis.title=element_text(family="sans",size=12,color="black"),
-#         panel.grid.minor = element_blank()
-#   ) + 
-#   NULL
-# cold.niche.gg
-# ggsave(cold.niche.gg, filename=here("results","edge_vs_range_niche_cold.png"), dpi=160, width=5, height=5)
-# 
-# warm.niche.r2 <- summary(lm(edge.sst.mean~niche.sst.mean, 
-#                             data=dat.predict.means %>%
-#                               filter(quantile=="quantile_0.05",
-#                                      sstvar=="sst.max")))$r.squared
-# warm.niche.r2.exp <- paste("R^2 == ", round(warm.niche.r2,2))
-# 
-# warm.niche.gg <- dat.predict.means %>%
-#   filter(quantile=="quantile_0.05",
-#          sstvar=="sst.max") %>%
-#   ggplot(aes(x=niche.sst.mean, y=edge.sst.mean)) +
-#   geom_point() +
-#   geom_errorbarh(aes(xmin=niche.sst.mean-niche.sst.sd, xmax=niche.sst.mean+niche.sst.sd)) +
-#   geom_errorbar(aes(ymin=edge.sst.mean-edge.sst.sd, ymax=edge.sst.mean+edge.sst.sd)) +
-#   annotate(geom="text",label=warm.niche.r2.exp, x=24, y=28, parse=TRUE, size=5) +
-#   geom_abline(slope=1, intercept=0,linetype="dashed") +
-#   scale_x_continuous(limits=c(8, 30)) + 
-#   scale_y_continuous(limits=c(8, 30)) + 
-#   labs(x="Range Warm Extreme (°C)", y="Edge Warm Extreme (°C)", title="Warm Range Limits") +
-#   theme_bw() +
-#   theme(text=element_text(family="sans",size=12,color="black"),
-#         legend.position="none",
-#         axis.text=element_text(family="sans",size=8,color="black"), 
-#         axis.title=element_text(family="sans",size=12,color="black"),
-#         panel.grid.minor = element_blank()
-#   ) + 
-#   NULL
-# warm.niche.gg
-# ggsave(warm.niche.gg, filename=here("results","edge_vs_range_niche_warm.png"), dpi=160, width=5, height=5)
-# 
-# alpha=0.05
-# power.lvl=0.95
-# nsamples=dim(dat.summary)[1]
-# powerTOSTone(alpha=alpha, statistical_power = power.lvl, N=nsamples)# here using N as num. samples, and then for each model, N will become num. years....
-# testlmdf <- dat.predict.lms[214,]
-# TOSTone(m=testlmdf$estimate, mu=0, sd=testlmdf$std.error, n=34, low_eqbound_d = -0.35, high_eqbound_d = 0.35)
-
-# corresponds to Cohen's d of +/- 0.35 
-
-# edge.niche.gg <- dat.predict.means %>%
-#   mutate(sstvar=recode(sstvar, 
-#                        sst.max="Maximum Monthly SST",
-#                        sst.min="Minimum Monthly SST", 
-#                        sst.mean="Mean Monthly SST"
-#          ),
-#          region=recode(region,
-#                        ebs="Eastern Bering Sea",
-#                        neus="Northeast",
-#                        wc="West Coast")) %>%
-#   ggplot(aes(x=niche.sst.mean, y=edge.sst.mean)) +
-#   geom_point() +
-#   geom_errorbarh(aes(xmin=niche.sst.mean-niche.sst.sd, xmax=niche.sst.mean+niche.sst.sd)) +
-#   geom_errorbar(aes(ymin=edge.sst.mean-edge.sst.sd, ymax=edge.sst.mean+edge.sst.sd)) +
-#   facet_grid(region~sstvar)+
-#   geom_abline(slope=1, intercept=0,linetype="dashed") +
-#   scale_x_continuous(limits=c(-2, 30)) + 
-#   scale_y_continuous(limits=c(-2, 30)) + 
-#   labs(x="Range Thermal Niche (°C)", y="Edge Thermal Niche (°C)") +
-#   theme_bw() +
-#   theme(text=element_text(family="sans",size=12,color="black"),
-#         legend.position="none",
-#         axis.text=element_text(family="sans",size=8,color="black"), 
-#        # axis.text.x = element_text(angle = 90, hjust = 1), 
-#         axis.title=element_text(family="sans",size=12,color="black"),
-#  #       strip.text.x = element_blank(),
-#    #     panel.grid.major = element_blank() 
-#         panel.grid.minor = element_blank()
-#  ) + 
-#   NULL
-# edge.niche.gg
-# ggsave(edge.niche.gg, filename=here("results","edge_vs_range_niche.png"), dpi=160, width=6, height=6)

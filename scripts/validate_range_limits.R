@@ -180,12 +180,13 @@ group_by(quantile, species, region, axis, year)  %>%
   mutate(mu.diff = Estimate - Estimate_compare, 
          se.diff = sqrt(Std.Error^2+Std.Error_compare^2),
          Zscore = mu.diff / se.diff,
-         p.val = (1-pnorm(abs(Zscore)))/2
+         p.val = 2*(1-pnorm(abs(Zscore)))
          ) %>% # use Wald test to get a p-value for each set of pairs 
   group_by(quantile, species, region, axis) %>%
-  mutate(wald.signif = ifelse(min(p.val)<=0.1, "Y","N")) %>%
+  mutate(min.pval = min(p.val),
+    wald.signif = ifelse(min(p.val)<=0.1, "Y","N")) %>%
   ungroup() %>%
-  select(quantile, species, region, axis, wald.signif) %>%
+  select(quantile, species, region, axis, wald.signif, min.pval) %>%
   distinct()
 
 dat %<>% left_join(dat_complete)
