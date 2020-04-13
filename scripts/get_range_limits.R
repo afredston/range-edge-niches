@@ -18,6 +18,7 @@ library(foreach)
 ########################
 
 # see Methods and VAST documentation for more background
+quantiles_of_interest = c(0.01, 0.5, 0.99)
 
 n_x = 100 
 fine_scale = TRUE
@@ -116,7 +117,6 @@ for(i in 1:length(Regions)){
     Catch_rates <- Catch_rates[!Catch_rates$Sci %in% Species_omit,] 
     Catch_rates <- Catch_rates[Catch_rates$Year>=1989,] # eliminating early years for now because of sampling design change
     Species_list <- unique(Catch_rates$Sci) 
-    
   }
   
   ########################
@@ -162,9 +162,9 @@ for(i in 1:length(Regions)){
   ########################
   
   detectCores()
-  registerDoParallel(18)
+  registerDoParallel(36)
   
-  foreach(j = Species_list) %dopar%{
+     foreach(j = Species_list) %dopar%{
     library(VAST)
     library(TMB)
     
@@ -297,23 +297,12 @@ for(i in 1:length(Regions)){
     ###  re-build and run model 
     ########################
     
-    if(reg=="wc"){
-      fit =try(
-        fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
-                  "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
-                  "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
-                  "a_i"=Data_Geostat[,'AreaSwept_km2'],
-                  "getReportCovariance"=FALSE, "getJointPrecision"=TRUE,
-                  lower=-Inf, upper=Inf,
-                  test_fit = FALSE,
-                  fine_scale=fine_scale,
-                  anisotropy=FALSE,
-                  Use_REML=TRUE,
-                  Z_gm = Z_gm,
-                  Q_ik=Q_ik # ONLY FOR WEST COAST, adding relative catchability factor the survey the data is from
-        ))
-    }else{
-      fit =try(
+    # this script includes progressive checks for model fitting issues, and re-runs fit_model with different specifications as necessary.  
+    # WC is separated because of the extra catchability coefficient for their survey change 
+    
+    # attempt 0: estimate parameters without estimating standard errors, just so we have them if needed later. this should run fine for all species. 
+    if(reg %in% c('ebs','neus')){
+      fit0 =try(
         fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
                   "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
                   "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
@@ -324,18 +313,216 @@ for(i in 1:length(Regions)){
                   fine_scale=fine_scale,
                   anisotropy=FALSE,
                   Use_REML=TRUE,
-                  Z_gm = Z_gm
+                  Z_gm = Z_gm,
+                  getsd=FALSE,
+                  newtonsteps=0
         ))
+      
+      # attempt 1: re-run model with SE estimation. if this model has no convergence issues as tested below, it will be the last model we run for this species. 
+      fit = try(
+        fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
+                  "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
+                  "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
+                  "a_i"=Data_Geostat[,'AreaSwept_km2'], 
+                  "getReportCovariance"=FALSE, "getJointPrecision"=TRUE,
+                  lower=-Inf, upper=Inf,
+                  test_fit = FALSE,
+                  fine_scale=fine_scale,
+                  anisotropy=FALSE,
+                  Use_REML=TRUE,
+                  Z_gm = Z_gm,
+                  getsd=TRUE,
+                  newtonsteps=1
+        ))
+                                                                                                           fit$parameter_estimates$adjustments_for_convergence <- "none"
+      
+      
+      # check that all maximum gradients have an absolute value below 0.01 and the model didn't throw an error 
+      if(class(fit)=="try-error" || (!class(fit)=="try-error" &  max(abs(fit$parameter_estimates$diagnostics$final_gradient)) > 0.01)){
+        
+        # attempt 2: if fit didn't work above, try re-running it with the parameter estimates from fit0
+        fit = try(
+          fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
+                    "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
+                    "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
+                    "a_i"=Data_Geostat[,'AreaSwept_km2'], 
+                    "getReportCovariance"=FALSE, "getJointPrecision"=TRUE,
+                    lower=-Inf, upper=Inf,
+                    test_fit = FALSE,
+                    fine_scale=fine_scale,
+                    anisotropy=FALSE,
+                    Use_REML=TRUE,
+                    Z_gm = Z_gm,
+                    getsd=TRUE,
+                    newtonsteps=1,
+                    parameters=fit0$ParHat
+          ))
+        fit$parameter_estimates$adjustments_for_convergence <- "used fit0 parameters"
+        
+        }
+      
+      
+      # check that all maximum gradients have an absolute value below 0.01 and the model didn't throw an error 
+      
+      if(class(fit)=="try-error" || (!class(fit)=="try-error" &  max(abs(fit$parameter_estimates$diagnostics$final_gradient)) > 0.01)){
+        
+        # attempt 3: if fit still failed / didn't converge, it could be because L_beta1_cf or L_beta2_ct is approaching zero; use a different RhoConfig 
+        
+        # if it's a model, but didn't converge... 
+        if(!class(fit)=="try-error"){
+          if(abs(fit$parameter_estimates$par["L_beta1_cf"]) < 0.001) {
+          newRhoConfig = c("Beta1"=3, "Beta2"=4, "Epsilon1"=4, "Epsilon2"=4)
+        }
+        if(abs(fit$parameter_estimates$par["L_beta2_ct"]) < 0.001) {
+          newRhoConfig = c("Beta1"=4, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
+        }
+        if(abs(fit$parameter_estimates$par["L_beta1_cf"]) < 0.001 & 
+           abs(fit$parameter_estimates$par["L_beta2_ct"]) < 0.001) {
+          newRhoConfig = c("Beta1"=3, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
+        }}
+        
+        # if it's an error...
+        if(class(fit)=="try-error"){
+          newRhoConfig = c("Beta1"=3, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
+        }
+        
+        fit = try(
+          fit_model("settings"=settings, 
+                    "RhoConfig"= newRhoConfig,
+                    "Lat_i"=Data_Geostat[,'Lat'],
+                    "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
+                    "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
+                    "a_i"=Data_Geostat[,'AreaSwept_km2'], 
+                    "getReportCovariance"=FALSE, "getJointPrecision"=TRUE,
+                    lower=-Inf, upper=Inf,
+                    test_fit = FALSE,
+                    fine_scale=fine_scale,
+                    anisotropy=FALSE,
+                    Use_REML=TRUE,
+                    Z_gm = Z_gm,
+                    getsd=TRUE,
+                    newtonsteps=1,
+                    parameters=fit0$ParHat
+                    
+          ))
+        fit$parameter_estimates$adjustments_for_convergence <- "changed RhoConfig"
+      }
+    }
+    
+    if(reg=="wc"){
+      
+      fit0 =try(
+        fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
+                  "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
+                  "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
+                  "a_i"=Data_Geostat[,'AreaSwept_km2'], 
+                  "getReportCovariance"=FALSE, "getJointPrecision"=TRUE,
+                  lower=-Inf, upper=Inf,
+                  test_fit = FALSE,
+                  fine_scale=fine_scale,
+                  anisotropy=FALSE,
+                  Use_REML=TRUE,
+                  Z_gm = Z_gm,
+                  getsd=FALSE,
+                  newtonsteps=0,
+                  Q_ik=Q_ik # ONLY FOR WEST COAST, adding relative catchability factor the survey the data is from
+        ))
+      
+      fit = try(
+        fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
+                  "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
+                  "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
+                  "a_i"=Data_Geostat[,'AreaSwept_km2'], 
+                  "getReportCovariance"=FALSE, "getJointPrecision"=TRUE,
+                  lower=-Inf, upper=Inf,
+                  test_fit = FALSE,
+                  fine_scale=fine_scale,
+                  anisotropy=FALSE,
+                  Use_REML=TRUE,
+                  Z_gm = Z_gm,
+                  getsd=TRUE,
+                  newtonsteps=1,
+                  Q_ik=Q_ik
+        ))
+      fit$parameter_estimates$adjustments_for_convergence <- "none"
+      
+      if(class(fit)=="try-error" || (!class(fit)=="try-error" &  max(abs(fit$parameter_estimates$diagnostics$final_gradient)) > 0.01)){
+        
+        fit = try(
+          fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
+                    "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
+                    "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
+                    "a_i"=Data_Geostat[,'AreaSwept_km2'], 
+                    "getReportCovariance"=FALSE, "getJointPrecision"=TRUE,
+                    lower=-Inf, upper=Inf,
+                    test_fit = FALSE,
+                    fine_scale=fine_scale,
+                    anisotropy=FALSE,
+                    Use_REML=TRUE,
+                    Z_gm = Z_gm,
+                    getsd=TRUE,
+                    newtonsteps=1,
+                    parameters=fit0$ParHat,
+                    Q_ik=Q_ik
+          ))
+        fit$parameter_estimates$adjustments_for_convergence <- "used fit0 parameters"
+        
+      }
+      
+      if(class(fit)=="try-error" || (!class(fit)=="try-error" &  max(abs(fit$parameter_estimates$diagnostics$final_gradient)) > 0.01)){
+        
+        if(!class(fit)=="try-error"){
+          if(abs(fit$parameter_estimates$par["L_beta1_cf"]) < 0.001) {
+            newRhoConfig = c("Beta1"=3, "Beta2"=4, "Epsilon1"=4, "Epsilon2"=4)
+          }
+          if(abs(fit$parameter_estimates$par["L_beta2_ct"]) < 0.001) {
+            newRhoConfig = c("Beta1"=4, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
+          }
+          if(abs(fit$parameter_estimates$par["L_beta1_cf"]) < 0.001 & 
+             abs(fit$parameter_estimates$par["L_beta2_ct"]) < 0.001) {
+            newRhoConfig = c("Beta1"=3, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
+          }}
+        
+        if(class(fit)=="try-error"){
+          newRhoConfig = c("Beta1"=3, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
+        }
+        
+        fit = try(
+          fit_model("settings"=settings, 
+                    "RhoConfig"= newRhoConfig,
+                    "Lat_i"=Data_Geostat[,'Lat'],
+                    "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
+                    "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
+                    "a_i"=Data_Geostat[,'AreaSwept_km2'], 
+                    "getReportCovariance"=FALSE, "getJointPrecision"=TRUE,
+                    lower=-Inf, upper=Inf,
+                    test_fit = FALSE,
+                    fine_scale=fine_scale,
+                    anisotropy=FALSE,
+                    Use_REML=TRUE,
+                    Z_gm = Z_gm,
+                    getsd=TRUE,
+                    newtonsteps=1,
+                    parameters=fit0$ParHat,
+                    Q_ik=Q_ik
+                    
+          ))
+        fit$parameter_estimates$adjustments_for_convergence <- "changed RhoConfig"
+      }
+      
     }
     
     
     # save species-specific parameter_estimates 
     if(!class(fit)=="try-error"){
       capture.output( fit$parameter_estimates, file=file.path(paste0(RegionFile,j,"_parameter_estimates",".txt") ))
+    }else{
+      capture.output( fit0$parameter_estimates, file=file.path(paste0(RegionFile,j,"_parameter_estimates_run0",".txt") ))
+      
     }
     
     
-    # calculate range edges 
+     # calculate range edges 
     if(!class(fit)=="try-error"){
       out_absolute <- try(
         get_range_edge( fit.model=fit,
@@ -343,7 +530,7 @@ for(i in 1:length(Regions)){
                         Year_Set=Year_Set, 
                         Years2Include=Years2Include, # drops years with no data (or 100% data)
                         n_samples=100, 
-                        quantiles=c(0.05,0.5,0.95),
+                        quantiles=quantiles_of_interest,
                         "Z_gm_axes"=Z_gm_axes,
                         "calculate_relative_to_average" = FALSE)
       )
@@ -354,7 +541,7 @@ for(i in 1:length(Regions)){
                         Year_Set=Year_Set, 
                         Years2Include=Years2Include, # drops years with no data (or 100% data)
                         n_samples=100, 
-                        quantiles=c(0.05,0.5,0.95),
+                        quantiles=quantiles_of_interest,
                         "Z_gm_axes"=Z_gm_axes,
                         "calculate_relative_to_average" = TRUE)
       )
@@ -363,14 +550,17 @@ for(i in 1:length(Regions)){
     if(!class(out_absolute)=='try-error'){
       out_absolute$species <- paste0(j) 
       write.csv(out_absolute, file.path(paste0(RegionFile,j,"_absolute_SE_edges.csv")))}
-  
+    
     if(!class(out_relative)=='try-error'){
       out_relative$species <- paste0(j) 
       write.csv(out_relative, file.path(paste0(RegionFile,j,"_relative_SE_edges.csv")))}
     
   }
-  # write out summary dfs of edges once per region
-  
+     
+     ########################
+     ###  save outputs
+     ########################
+     
   rel_edge_files <- list.files(path=RegionFile, pattern="relative_SE_edges.csv", full.names=TRUE)
   rel_edge_df <- dplyr::bind_rows(lapply(rel_edge_files, read.csv))
   rel_edge_df$X <- NULL
@@ -381,12 +571,8 @@ for(i in 1:length(Regions)){
   abs_edge_df$X <- NULL
   saveRDS(abs_edge_df, paste0(getwd(),"/processed-data/",reg,'_absolute_SE_vast_edge_df.rds'))
   
+  capture.output( settings, file=file.path(RegionFile,'settings.txt'))
+  
 }# end of parallel
 
-########################
-###  save outputs
-########################
 
-capture.output( settings, file=file.path(RegionFile,'settings.txt'))
-
-# edge dfs
