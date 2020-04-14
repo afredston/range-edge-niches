@@ -162,9 +162,9 @@ for(i in 1:length(Regions)){
   ########################
   
   detectCores()
-  registerDoParallel(36)
+  registerDoParallel(18)
   
-     foreach(j = Species_list) %dopar%{
+     foreach(j = spp_not_converged) %dopar%{
     library(VAST)
     library(TMB)
     
@@ -573,6 +573,10 @@ for(i in 1:length(Regions)){
   
   capture.output( settings, file=file.path(RegionFile,'settings.txt'))
   
-}# end of parallel
+  spp_not_converged <- setdiff(Species_list, unique(rel_edge_df$species))
+  saveRDS(spp_not_converged, paste0(RegionFile, "spp_not_converged.rds"))
+
+  
+  }# end of parallel
 
 

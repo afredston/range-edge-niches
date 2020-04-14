@@ -106,7 +106,7 @@ get_length <- function(lon, lat, distdf) {
   return(tmp)
 }
 
-# load clean but raw OISST data, assign each point a coastal distance, calculate annual summary stats for SST
+# load clean but raw OISST data, assign each point a coastal distance 
 # SLOW!
 wc.oisst.coastdist <- readRDS(here("processed-data","wc_oisst.rds"))$wc_oisst %>%
   mutate(year_measured = ifelse(month < wc.survey.earliest, year-1, year), 

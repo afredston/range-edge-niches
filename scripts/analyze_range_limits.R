@@ -34,8 +34,8 @@ dat.summary <- dat.models %>%
                        neus="Northeast",
                        wc="West Coast"),
          quantile=recode(quantile,
-                         quantile_0.05="Warm Limit",
-                         quantile_0.95="Cold Limit"))
+                         quantile_0.01="Warm Limit",
+                         quantile_0.99="Cold Limit"))
 write_csv(dat.summary, here("results","edge_species.csv"))
 
 dat.models.groups <- dat.models %>%
@@ -130,7 +130,8 @@ for(i in unique(dat.edges.sst.summary$species)) {
                                    adapt_delta = 0.95,
                                    chains = 4,
                                    cores = 1,
-                                   prior = normal(0, 1000))) # Burrows paper reports temperature spatial gradients up to 0.02 degrees C / km. taking the inverse, this could range from 50km shift for degree C up to 1000 km or higher. centering on 0 because relationship is not necessarily positive for all species. 
+                                   prior = normal(0, 1000),# Burrows paper reports temperature spatial gradients up to 0.02 degrees C / km. taking the inverse, this could range from 50km shift for degree C up to 1000 km or higher. centering on 0 because relationship is not necessarily positive for all species. 
+                                   weights = 1/(Std.Error)^2)) 
       if(!class(spp.bayes.lm)[1] == "try-error") { # adding try() here because some edges are so invariant that the model fails 
         spp.bayes.lm.tidy <- tidy_draws(spp.bayes.lm) %>%
           mutate(species = paste0(i),
@@ -226,8 +227,8 @@ bayes.lm.time.edgetype.gg <- spp.bayes.lm.df  %>%
   select(.draw, mean.param, region, quantile) %>%
   distinct() %>%
   mutate(quantile=recode(quantile,
-                         quantile_0.05="Warm Limit",
-                         quantile_0.95="Cold Limit")) %>%
+                         quantile_0.01="Warm Limit",
+                         quantile_0.99="Cold Limit")) %>%
   ggplot() +
   theme_bw() +
   geom_density(aes(x=mean.param, fill=region), color="black", alpha=0.5) +
@@ -268,9 +269,9 @@ ebs.sst <- readRDS(here("processed-data","ebs_sst_rotated.rds"))
 wc.sst <- readRDS(here("processed-data","wc_sst_coastdist.rds"))
 neus.sst <- readRDS(here("processed-data","neus_sst_coastdist.rds"))
 
-# note that daily datasets are converted into monthly means for comparability among regions 
+# note that datasets have both monthly readings (pre-1982, from hadisst) and daily (post-1982, from oisst) that are first converted into monthly means for comparability among regions/years
 ebs.sst.prepgam <- ebs.sst %>% 
-  group_by(N_km, E_km, month) %>%
+  group_by(N_km, E_km, year_match, month) %>%
   mutate(cell.month.mean=mean(sst)) %>%
   ungroup() %>%
   group_by(NW_km, year_match) %>%
@@ -283,7 +284,7 @@ ebs.sst.prepgam <- ebs.sst %>%
   mutate(year_match = as.factor(year_match)) 
 
 wc.sst.prepgam <- wc.sst %>% 
-  group_by(x, y, month) %>%
+  group_by(x, y, year_match, month) %>%
   mutate(cell.month.mean = mean(sst)) %>%
   group_by(coast_km, year_match) %>%
   mutate(sstmean = mean(cell.month.mean),
@@ -295,10 +296,12 @@ wc.sst.prepgam <- wc.sst %>%
   mutate(year_match = as.factor(year_match)) 
 
 neus.sst.prepgam <- neus.sst %>% 
+  group_by(x, y, month, year_match) %>%
+  mutate(cell.month.mean = mean(sst)) %>%
   group_by(coast_km, year_match) %>%
-  mutate(sstmean = mean(sst),
-         sstmax = max(sst),
-         sstmin = min(sst)) %>%
+  mutate(sstmean = mean(cell.month.mean),
+         sstmax = max(cell.month.mean),
+         sstmin = min(cell.month.mean)) %>%
   ungroup() %>%
   dplyr::select(year_match, coast_km, sstmean,sstmax, sstmin) %>%
   distinct() %>%
@@ -318,27 +321,21 @@ neus.sst.temp.gam.99 <- gam(sstmax ~ year_match + s(coast_km, by=year_match), da
 neus.sst.temp.gam.01 <- gam(sstmin ~ year_match + s(coast_km, by=year_match), data=neus.sst.prepgam)
 
 # predict temp from edge position--prep datasets
-ebs.minyear <- min(ebs.sst$year_match)
-wc.minyear <- min(wc.sst$year_match)
-neus.minyear <- min(neus.sst$year_match)
 
 ebs.pred <- dat.models %>%
-  filter(region=="ebs",
-         year >= ebs.minyear) %>%
+  filter(region=="ebs") %>%
   dplyr::select( -axis) %>%
   rename(NW_km=Estimate,
          year_match=year) 
 
 wc.pred <- dat.models %>%
-  filter(region=="wc",
-         year >= wc.minyear) %>%
+  filter(region=="wc") %>%
   dplyr::select( -axis) %>%
   rename(coast_km=Estimate,
          year_match=year) 
 
 neus.pred <- dat.models %>%
-  filter(region=="neus",
-         year >= neus.minyear) %>%
+  filter(region=="neus") %>%
   dplyr::select( -axis) %>%
   rename(coast_km=Estimate,
          year_match=year) 
@@ -462,16 +459,17 @@ for(i in unique(dat.predict.niche$species)) {
   }
 }
 quantile(spp.bayes.niche.lm.df$intercept.rhat)
-quantile(spp.bayes.niche.lm.df$year_match.rhat) # this one is not causing estimation problems 
-quantile(spp.bayes.niche.lm.df$sigma.rhat) # this is the problem child 
+quantile(spp.bayes.niche.lm.df$year_match.rhat)  
+quantile(spp.bayes.niche.lm.df$sigma.rhat) # this previously caused estimation problems, doesn't appear to be doing that anymore  
 
 spp.bayes.niche.filter <- spp.bayes.niche.lm.df %>% 
   group_by(region, species, quantile) %>%
   mutate(max.rhat = max(intercept.rhat, year_match.rhat, sigma.rhat)) %>%
   filter(max.rhat <= 1.1) # get rid of spp*region*edge combos where one of the SST extreme models didn't converge
 
-setdiff(spp.bayes.niche.lm.df %>% select(region, species, quantile) %>% distinct(), spp.bayes.niche.filter %>% select(region, species, quantile) %>% distinct()) # removes 3 rows all EBS
+setdiff(spp.bayes.niche.lm.df %>% select(region, species, quantile) %>% distinct(), spp.bayes.niche.filter %>% select(region, species, quantile) %>% distinct()) # 0 at present 
 
+# SLOW
 spp.bayes.niche.lm.stats <- spp.bayes.niche.filter %>% 
   group_by(.draw, species, region, quantile, predicted.var) %>%
   summarise(beta.mean = mean(year_match)) %>%
@@ -483,18 +481,19 @@ spp.bayes.niche.lm.stats <- spp.bayes.niche.filter %>%
   select(species, region, quantile, predicted.var, mean, median, lower, upper) %>%
   distinct()
 
-quantile(spp.bayes.niche.lm.stats$mean)
+quantile(spp.bayes.niche.lm.stats$mean) # should be distributed in the neighborhood of zero
 spp.bayes.niche.lm.stats %>% 
   ggplot() +
   geom_histogram(aes(x=mean))
 
 spp.bayes.niche.groups <- spp.bayes.niche.lm.stats %>%
-  left_join(dat.models.groups %>% select(-edgetype), by=c("region","species")) %>%
+  left_join(dat.models.groups %>% select(-edgetype), by=c("region","species")) %>% # add fish/invert column 
   rowwise() %>%
   mutate(crosses0 = ifelse(lower<0 & upper>0, TRUE, FALSE)) %>%
   group_by(region, quantile, species) %>% 
-  mutate(niche.group = ifelse(min(abs(mean)) < 0.01, "good_tracker", 
-                              ifelse(TRUE %in% crosses0, "lag_tracker", "non_tracker"))) %>%
+  mutate(niche.group = ifelse(min(abs(mean)) < 0.01, "good_tracker", # if ONE temp extreme has zero change -> good tracker 
+                              ifelse(TRUE %in% crosses0, "lag_tracker", "non_tracker")) # if ONE temp extreme crosses zero -> lagged tracker 
+         ) %>%
   select(region, quantile, species, niche.group) %>% 
   distinct()
 write_csv(spp.bayes.niche.groups, here("results","species_by_thermal_niche_group.csv"))
@@ -506,6 +505,7 @@ spp.bayes.niche.groups %>% group_by(niche.group, region) %>% summarise(n=n())
 spp.bayes.niche.groups %>% group_by(niche.group, quantile) %>% summarise(n=n())
 spp.bayes.niche.groups %>% group_by(region, quantile) %>% summarise(n=n())
 
+# scatterplot 
 dat.thermal.gg <- spp.bayes.niche.lm.stats %>%
   left_join(spp.bayes.niche.groups, by=c("region","quantile","species")) %>%
   ungroup() %>%
@@ -536,6 +536,7 @@ dat.thermal.gg <- spp.bayes.niche.lm.stats %>%
 dat.thermal.gg
 ggsave(dat.thermal.gg, filename=here("results","thermal_niche_time_coefficients.png"),dpi=160, width=10, height=4)
 
+# barplot by region 
 gg.niche.regions <- spp.bayes.niche.lm.stats %>%
   left_join(spp.bayes.niche.groups, by=c("region","quantile","species")) %>%
   ungroup() %>%
@@ -560,14 +561,15 @@ gg.niche.regions <- spp.bayes.niche.lm.stats %>%
   NULL
 gg.niche.regions
 
+# barplot by edge type 
 gg.niche.quantile <- spp.bayes.niche.lm.stats %>%
   left_join(spp.bayes.niche.groups, by=c("region","quantile","species")) %>%
   ungroup() %>%
   pivot_wider(names_from=predicted.var, values_from=c(mean,median,lower,upper)) %>%
-  mutate(quantile=factor(quantile, levels=c('quantile_0.05','quantile_0.95')),
+  mutate(quantile=factor(quantile, levels=c('quantile_0.01','quantile_0.99')),
          quantile=recode(quantile,
-                         quantile_0.05="Warm Edge",
-                         quantile_0.95="Cold Edge"),
+                         quantile_0.01="Warm Edge",
+                         quantile_0.99="Cold Edge"),
          niche.group=factor(niche.group, levels=c('good_tracker','lag_tracker','non_tracker')),
          niche.group=recode(niche.group,
                             good_tracker="TNH",
@@ -607,104 +609,104 @@ ggsave(gg.niche.regions, filename=here("results","niche_barplot_region.png"), dp
 ggsave(gg.niche.quantile, filename=here("results","niche_barplot_quantile.png"), dpi=300, width=3, height=7, scale=0.8)
 ggsave(gg.niche.taxa, filename=here("results","niche_barplot_taxa.png"), dpi=300, width=3, height=7, scale=0.8)
 
-# make example plots
-ex.spp1 <- "gadus macrocephalus" # good tracker, cold edge, EBS
-ex.spp2 <- "sebastes pinniger" # non tracker, warm edge, WC
-ex.spp3 <- "paralichthys oblongus" # lagged tracker, cold edge, NEUS
-
-ex.spp.bayes.gg1 <- spp.bayes.niche.filter %>% 
-  filter(species==ex.spp1) %>% 
-  group_by(.draw, predicted.var) %>%
-  mutate(mean.param = mean(year_match) ) %>%
-  ungroup() %>% 
-  select(.draw, mean.param, predicted.var) %>%
-  distinct() %>%
-  ggplot() +
-  theme_bw() +
-  geom_density(aes(x=mean.param, fill=predicted.var), color="black", alpha=0.5) +
-  scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
-  labs(x="Posterior Distribution of Coefficient (°C/year)",y="Density", fill=NULL) +
-  theme(legend.position="bottom") +
-  NULL
-ex.spp.bayes.gg1
-
-ex.spp.bayes.gg2 <- spp.bayes.niche.filter %>% 
-  filter(species==ex.spp2) %>% 
-  group_by(.draw, predicted.var) %>%
-  mutate(mean.param = mean(year_match) ) %>%
-  ungroup() %>% 
-  select(.draw, mean.param, predicted.var) %>%
-  distinct() %>%
-  ggplot() +
-  theme_bw() +
-  geom_density(aes(x=mean.param, fill=predicted.var), color="black", alpha=0.5) +
-  scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
-  labs(x="Posterior Distribution of Coefficient (°C/year)",y="Density", fill=NULL) +
-  theme(legend.position="bottom") +
-  NULL
-ex.spp.bayes.gg2
-
-ex.spp.bayes.gg3 <- spp.bayes.niche.filter %>% 
-  filter(species==ex.spp3) %>% 
-  group_by(.draw, predicted.var) %>%
-  mutate(mean.param = mean(year_match) ) %>%
-  ungroup() %>% 
-  select(.draw, mean.param, predicted.var) %>%
-  distinct() %>%
-  ggplot() +
-  theme_bw() +
-  geom_density(aes(x=mean.param, fill=predicted.var), color="black", alpha=0.5) +
-  scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
-  labs(x="Posterior Distribution of Coefficient (°C/year)",y="Density", fill=NULL) +
-  theme(legend.position="bottom") +
-  NULL
-ex.spp.bayes.gg3
-
-ex.spp.time.gg1 <- dat.predict.niche %>% 
-  filter(species==ex.spp1) %>%
-  mutate(species = str_to_sentence(species)) %>%
-  ggplot() +
-  geom_point(aes(x=year_match, y=sst, color=predicted.var)) +
-  geom_line(aes(x=year_match, y=sst, color=predicted.var)) +
-  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
-  theme_bw() +
-  labs(x="Year",y="Sea Surface Temperature at Edge (°C)", color=NULL) +
-  theme(legend.position="bottom")+
-  scale_x_continuous(limits=c(1988, 2018), breaks=seq(1988, 2018, 4))+
-  NULL
-ex.spp.time.gg1
-
-ex.spp.time.gg2 <- dat.predict.niche %>% 
-  filter(species==ex.spp2) %>%
-  mutate(species = str_to_sentence(species)) %>%
-  ggplot() +
-  geom_point(aes(x=year_match, y=sst, color=predicted.var)) +
-  geom_line(aes(x=year_match, y=sst, color=predicted.var)) +
-  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
-  theme_bw() +
-  labs(x="Year",y="Sea Surface Temperature at Edge (°C)", color=NULL) +
-  theme(legend.position="bottom")+
-  scale_x_continuous(limits=c(1982, 2018), breaks=seq(1982, 2018, 4))+
-  NULL
-ex.spp.time.gg2
-
-ex.spp.time.gg3 <- dat.predict.niche %>% 
-  filter(species==ex.spp3) %>%
-  mutate(species = str_to_sentence(species)) %>%
-  ggplot() +
-  geom_point(aes(x=year_match, y=sst, color=predicted.var)) +
-  geom_line(aes(x=year_match, y=sst, color=predicted.var)) +
-  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
-  theme_bw() +
-  labs(x="Year",y="Sea Surface Temperature at Edge (°C)", color=NULL) +
-  theme(legend.position="bottom")+
-  scale_x_continuous(limits=c(1968, 2018), breaks=seq(1968, 2018, 5))+
-  NULL
-ex.spp.time.gg3
-
-ggsave(ex.spp.bayes.gg1, dpi=160, width=4, height=4, filename=here("results","example_1_posterior.png"))
-ggsave(ex.spp.bayes.gg2, dpi=160, width=4, height=4, filename=here("results","example_2_posterior.png"))
-ggsave(ex.spp.bayes.gg3, dpi=160, width=4, height=4, filename=here("results","example_3_posterior.png"))
-ggsave(ex.spp.time.gg1, dpi=160, width=4, height=4, filename=here("results","example_1_niche.png"))
-ggsave(ex.spp.time.gg2, dpi=160, width=4, height=4, filename=here("results","example_2_niche.png"))
-ggsave(ex.spp.time.gg3, dpi=160, width=4, height=4, filename=here("results","example_3_niche.png"))
+# # make example plots for talks--species choices might be a little out of date 
+# ex.spp1 <- "gadus macrocephalus" # good tracker, cold edge, EBS
+# ex.spp2 <- "sebastes pinniger" # non tracker, warm edge, WC
+# ex.spp3 <- "paralichthys oblongus" # lagged tracker, cold edge, NEUS
+# 
+# ex.spp.bayes.gg1 <- spp.bayes.niche.filter %>% 
+#   filter(species==ex.spp1) %>% 
+#   group_by(.draw, predicted.var) %>%
+#   mutate(mean.param = mean(year_match) ) %>%
+#   ungroup() %>% 
+#   select(.draw, mean.param, predicted.var) %>%
+#   distinct() %>%
+#   ggplot() +
+#   theme_bw() +
+#   geom_density(aes(x=mean.param, fill=predicted.var), color="black", alpha=0.5) +
+#   scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+#   labs(x="Posterior Distribution of Coefficient (°C/year)",y="Density", fill=NULL) +
+#   theme(legend.position="bottom") +
+#   NULL
+# ex.spp.bayes.gg1
+# 
+# ex.spp.bayes.gg2 <- spp.bayes.niche.filter %>% 
+#   filter(species==ex.spp2) %>% 
+#   group_by(.draw, predicted.var) %>%
+#   mutate(mean.param = mean(year_match) ) %>%
+#   ungroup() %>% 
+#   select(.draw, mean.param, predicted.var) %>%
+#   distinct() %>%
+#   ggplot() +
+#   theme_bw() +
+#   geom_density(aes(x=mean.param, fill=predicted.var), color="black", alpha=0.5) +
+#   scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+#   labs(x="Posterior Distribution of Coefficient (°C/year)",y="Density", fill=NULL) +
+#   theme(legend.position="bottom") +
+#   NULL
+# ex.spp.bayes.gg2
+# 
+# ex.spp.bayes.gg3 <- spp.bayes.niche.filter %>% 
+#   filter(species==ex.spp3) %>% 
+#   group_by(.draw, predicted.var) %>%
+#   mutate(mean.param = mean(year_match) ) %>%
+#   ungroup() %>% 
+#   select(.draw, mean.param, predicted.var) %>%
+#   distinct() %>%
+#   ggplot() +
+#   theme_bw() +
+#   geom_density(aes(x=mean.param, fill=predicted.var), color="black", alpha=0.5) +
+#   scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+#   labs(x="Posterior Distribution of Coefficient (°C/year)",y="Density", fill=NULL) +
+#   theme(legend.position="bottom") +
+#   NULL
+# ex.spp.bayes.gg3
+# 
+# ex.spp.time.gg1 <- dat.predict.niche %>% 
+#   filter(species==ex.spp1) %>%
+#   mutate(species = str_to_sentence(species)) %>%
+#   ggplot() +
+#   geom_point(aes(x=year_match, y=sst, color=predicted.var)) +
+#   geom_line(aes(x=year_match, y=sst, color=predicted.var)) +
+#   scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+#   theme_bw() +
+#   labs(x="Year",y="Sea Surface Temperature at Edge (°C)", color=NULL) +
+#   theme(legend.position="bottom")+
+#   scale_x_continuous(limits=c(1988, 2018), breaks=seq(1988, 2018, 4))+
+#   NULL
+# ex.spp.time.gg1
+# 
+# ex.spp.time.gg2 <- dat.predict.niche %>% 
+#   filter(species==ex.spp2) %>%
+#   mutate(species = str_to_sentence(species)) %>%
+#   ggplot() +
+#   geom_point(aes(x=year_match, y=sst, color=predicted.var)) +
+#   geom_line(aes(x=year_match, y=sst, color=predicted.var)) +
+#   scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+#   theme_bw() +
+#   labs(x="Year",y="Sea Surface Temperature at Edge (°C)", color=NULL) +
+#   theme(legend.position="bottom")+
+#   scale_x_continuous(limits=c(1982, 2018), breaks=seq(1982, 2018, 4))+
+#   NULL
+# ex.spp.time.gg2
+# 
+# ex.spp.time.gg3 <- dat.predict.niche %>% 
+#   filter(species==ex.spp3) %>%
+#   mutate(species = str_to_sentence(species)) %>%
+#   ggplot() +
+#   geom_point(aes(x=year_match, y=sst, color=predicted.var)) +
+#   geom_line(aes(x=year_match, y=sst, color=predicted.var)) +
+#   scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+#   theme_bw() +
+#   labs(x="Year",y="Sea Surface Temperature at Edge (°C)", color=NULL) +
+#   theme(legend.position="bottom")+
+#   scale_x_continuous(limits=c(1968, 2018), breaks=seq(1968, 2018, 5))+
+#   NULL
+# ex.spp.time.gg3
+# 
+# ggsave(ex.spp.bayes.gg1, dpi=160, width=4, height=4, filename=here("results","example_1_posterior.png"))
+# ggsave(ex.spp.bayes.gg2, dpi=160, width=4, height=4, filename=here("results","example_2_posterior.png"))
+# ggsave(ex.spp.bayes.gg3, dpi=160, width=4, height=4, filename=here("results","example_3_posterior.png"))
+# ggsave(ex.spp.time.gg1, dpi=160, width=4, height=4, filename=here("results","example_1_niche.png"))
+# ggsave(ex.spp.time.gg2, dpi=160, width=4, height=4, filename=here("results","example_2_niche.png"))
+# ggsave(ex.spp.time.gg3, dpi=160, width=4, height=4, filename=here("results","example_3_niche.png"))

@@ -30,8 +30,8 @@ There are some additional directories for model outputs that are not version con
 Scripts should be run in the following order:
 
 1. `get_neus_data.R` imports Northeast data (the only dataset requiring manual download) and reformats it to match those downloaded with [FishData](https://github.com/James-Thorson/FishData)
-1. `get_neus_wc_coastlines.R` creates a coastal distance axis for use with VAST for those two regions 
-1. `get_range_limits.R` uses VAST to calculate range edges for all three regions. It runs in parallel but even so may take several days for all species and regions. Note that the output data frames are also in the repository
+1. `get_neus_wc_coastlines.R` creates a coastal distance axis for use with VAST for those two regions
+1. `get_range_limits.R` uses VAST to calculate range edges for all three regions. It runs in parallel (don't forget to update the number of cores based on your machine!) but even so may take several days for all species and regions. Note that the output data frames are also in the repository
 1. `get_taxonomy.R` fetches higher taxonomy of study species from [WORMS](http://marinespecies.org/aphia.php?p=search) using [taxize](https://github.com/ropensci/taxize/)
 1. `validate_range_limits.R` filters the VAST output for only range limits that actually fall in the study region, based on passing certain filters. This needs to be re-run every time VAST is re-run in `get_range_limits.R` 
 1. `get_temp_all.R` fetches historical SST data from the [NOAA ERDDAP server](https://coastwatch.pfeg.noaa.gov/erddap/index.html) for each region. `get_temp_all.R` and `crop_temp_all.R` only need to be run once
