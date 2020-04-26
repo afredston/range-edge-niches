@@ -384,6 +384,11 @@ dat.predict <- rbind(neus.pred, wc.pred, ebs.pred)%>%
   mutate(predicted.var=str_replace(predicted.var, ".se","")) %>%
   inner_join(dat.predict1)
 
+
+dat.predict.niche <- dat.predict %>%
+  filter(!predicted.var=="predict.sstmean")
+write_csv(dat.predict.niche, here("processed-data","species_thermal_niche_v_time.csv"))
+
 # plot thermal niches over time
 neus.thermal.niche.gg <- dat.predict %>%
   filter(region=="neus") %>%
@@ -423,8 +428,6 @@ ggsave(ebs.thermal.niche.gg, filename=here("results","ebs_edge_niches_time.png")
 
 # Bayesian test for edge thermal niche change over time 
 
-dat.predict.niche <- dat.predict %>%
-  filter(!predicted.var=="predict.sstmean")
 
 spp.bayes.niche.lm.df <- NULL
 for(i in unique(dat.predict.niche$species)) {
@@ -472,6 +475,8 @@ spp.bayes.niche.filter <- spp.bayes.niche.lm.df %>%
 setdiff(spp.bayes.niche.lm.df %>% select(region, species, quantile) %>% distinct(), spp.bayes.niche.filter %>% select(region, species, quantile) %>% distinct()) # 0 at present 
 
 # SLOW
+
+# summarize posterior distributions and write out 
 spp.bayes.niche.lm.stats <- spp.bayes.niche.filter %>% 
   group_by(.draw, species, region, quantile, predicted.var) %>%
   summarise(beta.mean = mean(year_match)) %>%
@@ -482,12 +487,14 @@ spp.bayes.niche.lm.stats <- spp.bayes.niche.filter %>%
             upper=quantile(beta.mean, 0.95)) %>%
   select(species, region, quantile, predicted.var, mean, median, lower, upper) %>%
   distinct()
+write_csv(spp.bayes.niche.lm.stats, here("results","species_bayes_niche_lm_summary.csv"))
 
 quantile(spp.bayes.niche.lm.stats$mean) # should be distributed in the neighborhood of zero
 spp.bayes.niche.lm.stats %>% 
   ggplot() +
   geom_histogram(aes(x=mean))
 
+# identify which hypothesis the posterior beta is consistent with, and write out 
 spp.bayes.niche.groups <- spp.bayes.niche.lm.stats %>%
   left_join(dat.models.groups %>% select(-edgetype), by=c("region","species")) %>% # add fish/invert column 
   rowwise() %>%
@@ -507,45 +514,6 @@ spp.bayes.niche.groups %>% group_by(niche.group, region) %>% summarise(n=n())
 spp.bayes.niche.groups %>% group_by(niche.group, quantile) %>% summarise(n=n())
 spp.bayes.niche.groups %>% group_by(region, quantile) %>% summarise(n=n())
 
-# mega barplot 
-gg.niche.barplot <- spp.bayes.niche.lm.stats %>%
-  left_join(spp.bayes.niche.groups, by=c("region","quantile","species")) %>%
-  ungroup() %>%
-  pivot_wider(names_from=predicted.var, values_from=c(mean,median,lower,upper)) %>%
-  mutate(quantile=factor(quantile, levels=c('quantile_0.01','quantile_0.99')),
-         quantile=recode(quantile,
-                         quantile_0.01="Warm Edge",
-                         quantile_0.99="Cold Edge"),
-         region=factor(region, levels=c('neus','wc','ebs')),
-         region=recode(region,
-                       ebs="Eastern Bering Sea",
-                       neus="Northeast",
-                       wc="West Coast"),
-         niche.group=factor(niche.group, levels=c('good_tracker','partial_tracker','non_tracker')),
-         niche.group=recode(niche.group,
-                            good_tracker="TNH",
-                            partial_tracker="PTH",
-                            non_tracker="TIH")) %>%
-  group_by(quantile, region, niche.group) %>%
-  mutate(count = length(species)) %>%
-  select(count, region, niche.group, quantile) %>%
-  ungroup() %>%
-  distinct() %>%
-  ggplot() +
-  geom_bar(aes(y=forcats::fct_rev(niche.group), x=count, fill=quantile), stat="identity", color="black") +
-  scale_fill_manual(values=c("white","black")) +
-  theme_bw() +
-  labs(x=NULL, y=NULL)+
-  theme(legend.position = "bottom",
-        legend.title = element_blank(),
-        panel.grid.major.y = element_blank(),
-        panel.grid.minor.y = element_blank())+
-  facet_wrap(~region, ncol=1) +
-   guides(fill = guide_legend(reverse = TRUE)) +
-  labs(x="Number of Range Edges") +
-NULL
-gg.niche.barplot
-ggsave(gg.niche.barplot, filename=here("results","barplot_all_groups.png"),dpi=160, width=6, height=4)
 
 # scatterplot 
 # dat.thermal.gg <- spp.bayes.niche.lm.stats %>%
@@ -578,177 +546,75 @@ ggsave(gg.niche.barplot, filename=here("results","barplot_all_groups.png"),dpi=1
 # dat.thermal.gg
 # ggsave(dat.thermal.gg, filename=here("results","thermal_niche_time_coefficients.png"),dpi=160, width=10, height=4)
 
-# barplot by region 
-gg.niche.regions <- spp.bayes.niche.lm.stats %>%
-  left_join(spp.bayes.niche.groups, by=c("region","quantile","species")) %>%
-  ungroup() %>%
-  pivot_wider(names_from=predicted.var, values_from=c(mean,median,lower,upper)) %>%
-  mutate(region=factor(region, levels=c('neus','wc','ebs')),
-         region=recode(region,
-                       ebs="Eastern Bering Sea",
-                       neus="Northeast",
-                       wc="West Coast"),
-         niche.group=factor(niche.group, levels=c('good_tracker','partial_tracker','non_tracker')),
-         niche.group=recode(niche.group,
-                            good_tracker="TNH",
-                            partial_tracker="PTH",
-                            non_tracker="TIH")) %>%
-  ggplot(aes(region)) +
-  geom_bar(aes(fill=niche.group), color="black") +
-  scale_fill_manual(values=c("white","darkgrey","black")) +
-  theme_bw() +
-  labs(x=NULL, y=NULL)+
-  theme(legend.position = "bottom",
-        legend.title = element_blank()) +
-  NULL
-gg.niche.regions
-
-# barplot by edge type 
-gg.niche.quantile <- spp.bayes.niche.lm.stats %>%
-  left_join(spp.bayes.niche.groups, by=c("region","quantile","species")) %>%
-  ungroup() %>%
-  pivot_wider(names_from=predicted.var, values_from=c(mean,median,lower,upper)) %>%
-  mutate(quantile=factor(quantile, levels=c('quantile_0.01','quantile_0.99')),
-         quantile=recode(quantile,
-                         quantile_0.01="Warm Edge",
-                         quantile_0.99="Cold Edge"),
-         niche.group=factor(niche.group, levels=c('good_tracker','partial_tracker','non_tracker')),
-         niche.group=recode(niche.group,
-                            good_tracker="TNH",
-                            partial_tracker="PTH",
-                            non_tracker="TIH")) %>%
-  ggplot(aes(quantile)) +
-  geom_bar(aes(fill=niche.group), color="black") +
-  scale_fill_manual(values=c("white","darkgrey","black")) +
-  theme_bw() +
-  labs(x=NULL, y=NULL)+
-  theme(legend.position = "bottom",
-        legend.title = element_blank()) +
-  NULL
-gg.niche.quantile
-
-gg.niche.taxa <- spp.bayes.niche.lm.stats %>%
-  left_join(spp.bayes.niche.groups, by=c("region","quantile","species")) %>%
-  left_join(dat.models.groups) %>% 
-  ungroup() %>%
-  pivot_wider(names_from=predicted.var, values_from=c(mean,median,lower,upper)) %>%
-  mutate(
-    niche.group=factor(niche.group, levels=c('good_tracker','partial_tracker','non_tracker')),
-    niche.group=recode(niche.group,
-                       good_tracker="TNH",
-                       partial_tracker="PTH",
-                       non_tracker="TIH")) %>%
-  ggplot(aes(taxongroup)) +
-  geom_bar(aes(fill=niche.group), color="black") +
-  scale_fill_manual(values=c("white","darkgrey","black")) +
-  theme_bw() +
-  labs(x=NULL, y=NULL)+
-  theme(legend.position = "bottom",
-        legend.title = element_blank()) +
-  NULL
-gg.niche.taxa
-ggsave(gg.niche.regions, filename=here("results","niche_barplot_region.png"), dpi=300, width=4, height=7, scale=0.8)
-ggsave(gg.niche.quantile, filename=here("results","niche_barplot_quantile.png"), dpi=300, width=3, height=7, scale=0.8)
-ggsave(gg.niche.taxa, filename=here("results","niche_barplot_taxa.png"), dpi=300, width=3, height=7, scale=0.8)
-
-# # make example plots for talks--species choices might be a little out of date 
-# ex.spp1 <- "gadus macrocephalus" # good tracker, cold edge, EBS
-# ex.spp2 <- "sebastes pinniger" # non tracker, warm edge, WC
-# ex.spp3 <- "paralichthys oblongus" # lagged tracker, cold edge, NEUS
-# 
-# ex.spp.bayes.gg1 <- spp.bayes.niche.filter %>% 
-#   filter(species==ex.spp1) %>% 
-#   group_by(.draw, predicted.var) %>%
-#   mutate(mean.param = mean(year_match) ) %>%
-#   ungroup() %>% 
-#   select(.draw, mean.param, predicted.var) %>%
-#   distinct() %>%
-#   ggplot() +
+# # barplot by region 
+# gg.niche.regions <- spp.bayes.niche.lm.stats %>%
+#   left_join(spp.bayes.niche.groups, by=c("region","quantile","species")) %>%
+#   ungroup() %>%
+#   pivot_wider(names_from=predicted.var, values_from=c(mean,median,lower,upper)) %>%
+#   mutate(region=factor(region, levels=c('neus','wc','ebs')),
+#          region=recode(region,
+#                        ebs="Eastern Bering Sea",
+#                        neus="Northeast",
+#                        wc="West Coast"),
+#          niche.group=factor(niche.group, levels=c('good_tracker','partial_tracker','non_tracker')),
+#          niche.group=recode(niche.group,
+#                             good_tracker="TNH",
+#                             partial_tracker="PTH",
+#                             non_tracker="TIH")) %>%
+#   ggplot(aes(region)) +
+#   geom_bar(aes(fill=niche.group), color="black") +
+#   scale_fill_manual(values=c("white","darkgrey","black")) +
 #   theme_bw() +
-#   geom_density(aes(x=mean.param, fill=predicted.var), color="black", alpha=0.5) +
-#   scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
-#   labs(x="Posterior Distribution of Coefficient (°C/year)",y="Density", fill=NULL) +
-#   theme(legend.position="bottom") +
+#   labs(x=NULL, y=NULL)+
+#   theme(legend.position = "bottom",
+#         legend.title = element_blank()) +
 #   NULL
-# ex.spp.bayes.gg1
+# gg.niche.regions
 # 
-# ex.spp.bayes.gg2 <- spp.bayes.niche.filter %>% 
-#   filter(species==ex.spp2) %>% 
-#   group_by(.draw, predicted.var) %>%
-#   mutate(mean.param = mean(year_match) ) %>%
-#   ungroup() %>% 
-#   select(.draw, mean.param, predicted.var) %>%
-#   distinct() %>%
-#   ggplot() +
+# # barplot by edge type 
+# gg.niche.quantile <- spp.bayes.niche.lm.stats %>%
+#   left_join(spp.bayes.niche.groups, by=c("region","quantile","species")) %>%
+#   ungroup() %>%
+#   pivot_wider(names_from=predicted.var, values_from=c(mean,median,lower,upper)) %>%
+#   mutate(quantile=factor(quantile, levels=c('quantile_0.01','quantile_0.99')),
+#          quantile=recode(quantile,
+#                          quantile_0.01="Warm Edge",
+#                          quantile_0.99="Cold Edge"),
+#          niche.group=factor(niche.group, levels=c('good_tracker','partial_tracker','non_tracker')),
+#          niche.group=recode(niche.group,
+#                             good_tracker="TNH",
+#                             partial_tracker="PTH",
+#                             non_tracker="TIH")) %>%
+#   ggplot(aes(quantile)) +
+#   geom_bar(aes(fill=niche.group), color="black") +
+#   scale_fill_manual(values=c("white","darkgrey","black")) +
 #   theme_bw() +
-#   geom_density(aes(x=mean.param, fill=predicted.var), color="black", alpha=0.5) +
-#   scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
-#   labs(x="Posterior Distribution of Coefficient (°C/year)",y="Density", fill=NULL) +
-#   theme(legend.position="bottom") +
+#   labs(x=NULL, y=NULL)+
+#   theme(legend.position = "bottom",
+#         legend.title = element_blank()) +
 #   NULL
-# ex.spp.bayes.gg2
+# gg.niche.quantile
 # 
-# ex.spp.bayes.gg3 <- spp.bayes.niche.filter %>% 
-#   filter(species==ex.spp3) %>% 
-#   group_by(.draw, predicted.var) %>%
-#   mutate(mean.param = mean(year_match) ) %>%
-#   ungroup() %>% 
-#   select(.draw, mean.param, predicted.var) %>%
-#   distinct() %>%
-#   ggplot() +
+# gg.niche.taxa <- spp.bayes.niche.lm.stats %>%
+#   left_join(spp.bayes.niche.groups, by=c("region","quantile","species")) %>%
+#   left_join(dat.models.groups) %>% 
+#   ungroup() %>%
+#   pivot_wider(names_from=predicted.var, values_from=c(mean,median,lower,upper)) %>%
+#   mutate(
+#     niche.group=factor(niche.group, levels=c('good_tracker','partial_tracker','non_tracker')),
+#     niche.group=recode(niche.group,
+#                        good_tracker="TNH",
+#                        partial_tracker="PTH",
+#                        non_tracker="TIH")) %>%
+#   ggplot(aes(taxongroup)) +
+#   geom_bar(aes(fill=niche.group), color="black") +
+#   scale_fill_manual(values=c("white","darkgrey","black")) +
 #   theme_bw() +
-#   geom_density(aes(x=mean.param, fill=predicted.var), color="black", alpha=0.5) +
-#   scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
-#   labs(x="Posterior Distribution of Coefficient (°C/year)",y="Density", fill=NULL) +
-#   theme(legend.position="bottom") +
+#   labs(x=NULL, y=NULL)+
+#   theme(legend.position = "bottom",
+#         legend.title = element_blank()) +
 #   NULL
-# ex.spp.bayes.gg3
-# 
-# ex.spp.time.gg1 <- dat.predict.niche %>% 
-#   filter(species==ex.spp1) %>%
-#   mutate(species = str_to_sentence(species)) %>%
-#   ggplot() +
-#   geom_point(aes(x=year_match, y=sst, color=predicted.var)) +
-#   geom_line(aes(x=year_match, y=sst, color=predicted.var)) +
-#   scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
-#   theme_bw() +
-#   labs(x="Year",y="Sea Surface Temperature at Edge (°C)", color=NULL) +
-#   theme(legend.position="bottom")+
-#   scale_x_continuous(limits=c(1988, 2018), breaks=seq(1988, 2018, 4))+
-#   NULL
-# ex.spp.time.gg1
-# 
-# ex.spp.time.gg2 <- dat.predict.niche %>% 
-#   filter(species==ex.spp2) %>%
-#   mutate(species = str_to_sentence(species)) %>%
-#   ggplot() +
-#   geom_point(aes(x=year_match, y=sst, color=predicted.var)) +
-#   geom_line(aes(x=year_match, y=sst, color=predicted.var)) +
-#   scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
-#   theme_bw() +
-#   labs(x="Year",y="Sea Surface Temperature at Edge (°C)", color=NULL) +
-#   theme(legend.position="bottom")+
-#   scale_x_continuous(limits=c(1982, 2018), breaks=seq(1982, 2018, 4))+
-#   NULL
-# ex.spp.time.gg2
-# 
-# ex.spp.time.gg3 <- dat.predict.niche %>% 
-#   filter(species==ex.spp3) %>%
-#   mutate(species = str_to_sentence(species)) %>%
-#   ggplot() +
-#   geom_point(aes(x=year_match, y=sst, color=predicted.var)) +
-#   geom_line(aes(x=year_match, y=sst, color=predicted.var)) +
-#   scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
-#   theme_bw() +
-#   labs(x="Year",y="Sea Surface Temperature at Edge (°C)", color=NULL) +
-#   theme(legend.position="bottom")+
-#   scale_x_continuous(limits=c(1968, 2018), breaks=seq(1968, 2018, 5))+
-#   NULL
-# ex.spp.time.gg3
-# 
-# ggsave(ex.spp.bayes.gg1, dpi=160, width=4, height=4, filename=here("results","example_1_posterior.png"))
-# ggsave(ex.spp.bayes.gg2, dpi=160, width=4, height=4, filename=here("results","example_2_posterior.png"))
-# ggsave(ex.spp.bayes.gg3, dpi=160, width=4, height=4, filename=here("results","example_3_posterior.png"))
-# ggsave(ex.spp.time.gg1, dpi=160, width=4, height=4, filename=here("results","example_1_niche.png"))
-# ggsave(ex.spp.time.gg2, dpi=160, width=4, height=4, filename=here("results","example_2_niche.png"))
-# ggsave(ex.spp.time.gg3, dpi=160, width=4, height=4, filename=here("results","example_3_niche.png"))
+# gg.niche.taxa
+# ggsave(gg.niche.regions, filename=here("results","niche_barplot_region.png"), dpi=300, width=4, height=7, scale=0.8)
+# ggsave(gg.niche.quantile, filename=here("results","niche_barplot_quantile.png"), dpi=300, width=3, height=7, scale=0.8)
+# ggsave(gg.niche.taxa, filename=here("results","niche_barplot_taxa.png"), dpi=300, width=3, height=7, scale=0.8)
