@@ -114,7 +114,7 @@ dat.edges.sst.summary <- dat.models %>%
 #   select(-data, -model) %>%
 #   filter(!term=="(Intercept)")
 
-# species shifts vs T 
+# species shifts vs temp 
 spp.bayes.sst.lm.df <- NULL
 for(i in unique(dat.edges.sst.summary$species)) {
   dfprep1 <- dat.edges.sst.summary[dat.edges.sst.summary$species==i,] # subdivide by species 
@@ -242,7 +242,8 @@ bayes.lm.time.edgetype.gg <- spp.bayes.lm.df  %>%
 bayes.lm.time.edgetype.gg
 ggsave(bayes.lm.time.edgetype.gg, width=6, height=4, dpi=160, filename=here("results","edge_coefficients_time_edgetype.png"), scale=1.6)
 
-bayes.lm.time.stats <- spp.bayes.lm.df %>%
+# edge shift stats by region
+spp.bayes.lm.df %>%
   group_by(.draw, region) %>%
   summarise(mean.year = mean(year)) %>%
   group_by(region) %>%
@@ -251,7 +252,8 @@ bayes.lm.time.stats <- spp.bayes.lm.df %>%
             lower=quantile(mean.year, 0.05),
             upper=quantile(mean.year, 0.95))
 
-bayes.lm.time.edgetype.stats <- spp.bayes.lm.df %>%
+# edge shift stats by region and edgetype
+spp.bayes.lm.df %>%
   group_by(.draw, region, quantile) %>%
   summarise(mean.year = mean(year)) %>%
   group_by(region, quantile) %>%
@@ -259,6 +261,16 @@ bayes.lm.time.edgetype.stats <- spp.bayes.lm.df %>%
             median=median(mean.year),
             lower=quantile(mean.year, 0.05),
             upper=quantile(mean.year, 0.95))
+
+spp.bayes.lm.df.summary <- spp.bayes.lm.df %>%
+  group_by(.draw, species, region, quantile) %>%
+  summarise(mean.year = mean(year)) %>%
+  group_by(species, region, quantile) %>%
+  summarise(mean=mean(mean.year),
+            median=median(mean.year),
+            lower=quantile(mean.year, 0.05),
+            upper=quantile(mean.year, 0.95))
+write_csv(spp.bayes.lm.df.summary, here("results","species_edge_shifts_vs_time.csv"))
 
 #######################
 ### predict temperatures at edges 
@@ -426,8 +438,12 @@ ebs.thermal.niche.gg <- dat.predict %>%
 ebs.thermal.niche.gg
 ggsave(ebs.thermal.niche.gg, filename=here("results","ebs_edge_niches_time.png"),dpi=160, width=12,height=11,scale=1.3)
 
-# Bayesian test for edge thermal niche change over time 
 
+#######################
+### estimate change in edge thermal niche over time
+#######################
+
+# Bayesian test for edge thermal niche change over time 
 
 spp.bayes.niche.lm.df <- NULL
 for(i in unique(dat.predict.niche$species)) {
@@ -494,6 +510,10 @@ spp.bayes.niche.lm.stats %>%
   ggplot() +
   geom_histogram(aes(x=mean))
 
+#######################
+### classify results by niche hypothesis 
+#######################
+
 # identify which hypothesis the posterior beta is consistent with, and write out 
 spp.bayes.niche.groups <- spp.bayes.niche.lm.stats %>%
   left_join(dat.models.groups %>% select(-edgetype), by=c("region","species")) %>% # add fish/invert column 
@@ -513,6 +533,15 @@ spp.bayes.niche.groups %>% left_join(dat.models.groups) %>% group_by(region, tax
 spp.bayes.niche.groups %>% group_by(niche.group, region) %>% summarise(n=n())
 spp.bayes.niche.groups %>% group_by(niche.group, quantile) %>% summarise(n=n())
 spp.bayes.niche.groups %>% group_by(region, quantile) %>% summarise(n=n())
+
+# of the temperature-independent species, which had a significant edge shift over time? 
+spp.tih <- spp.bayes.niche.groups %>%
+  filter(niche.group=="non_tracker") %>%
+  left_join(spp.bayes.lm.df.summary) %>%
+  rowwise() %>%
+  mutate(crosses0 = ifelse(lower<0 & upper>0, TRUE, FALSE)) %>%
+  mutate(signif.shift = ifelse(TRUE %in% crosses0, "N", "Y"))
+
 
 
 # scatterplot 
