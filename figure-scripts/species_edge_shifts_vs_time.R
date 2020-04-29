@@ -1,79 +1,50 @@
-library(here)
 library(tidyverse)
+library(here)
 
-spp.bayes.niche.groups <- read_csv(here("results","species_by_thermal_niche_group.csv"))
-spp.bayes.lm.df.summary <- read_csv(here("results","species_edge_shifts_vs_time.csv"))
+edge.spp.dat <- readRDS(here("processed-data","all_edge_spp_df.rds"))
 
-edge.shift.df <- spp.bayes.niche.groups %>%
-  left_join(spp.bayes.lm.df.summary) %>%
-  arrange(desc(species)) %>%
-  mutate(species = str_to_sentence(species),
-         species = factor(species, unique(species)),
-         quantile = as.factor(quantile))
-
-neus.edge.gg <- edge.shift.df %>%
-  filter(region=="neus") %>%
-  ggplot(aes(y=species, x=median, xmin=lower, xmax=upper, color=quantile, fill=quantile, shape=niche.group)) +
-  geom_errorbarh() +
+neus.gg <- edge.spp.dat %>%
+  filter(region=="neus",
+         axis=="coast_km") %>%
+  ggplot(aes(x=year, y=Estimate, group=quantile, color=quantile)) +
   geom_point() +
-  scale_color_manual(values=c('quantile_0.01'='#C7361D', 'quantile_0.99'='#3A4ED0')) +
-  geom_vline(xintercept=0, color="black") +
-  labs(y=NULL, x="Edge Shift (km/yr) \n                 ", title="Northeast") +
-  scale_x_continuous(breaks=seq(-60, 60, 10), limits=c(-68, 68)) + 
+  geom_line() +
+  geom_errorbar(aes(ymin=Estimate-Std.Error, ymax=Estimate+Std.Error, group=quantile, color=quantile)) +
+  facet_wrap(~species, ncol=5)+
+  theme(legend.position = "none") +
+  labs(x="Year", y="Coastal Distance (km)") +
   theme_bw() +
-  theme(legend.position = "none",
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        text=element_text(family="sans",size=10,color="black"),
-        legend.text = element_text(size=10),
-        axis.title=element_text(family="sans",size=12,color="black"),
-        axis.text=element_text(family="sans",size=10,color="black"),
-        plot.margin=unit(c(5.5, 15, 5.5, 5.5), "points")) +
+  theme( axis.text.x = element_text(angle = 90, hjust = 1), legend.position="bottom")+
   NULL
-neus.edge.gg
+ggsave(neus.gg, filename=here("results","VAST_edges_neus_no_SE_filter.png"),height=12,width=7,dpi=160, scale=1.1)
 
-wc.edge.gg <- edge.shift.df %>%
-  filter(region=="wc") %>%
-  ggplot(aes(y=species, x=median, xmin=lower, xmax=upper, color=quantile, fill=quantile, shape=niche.group)) +
-  geom_errorbarh() +
+ebs.gg <- edge.spp.dat %>%
+  filter(region=="ebs",
+         axis=="NW_km") %>% 
+  ggplot(aes(x=year, y=Estimate, group=quantile, color=quantile)) +
   geom_point() +
-  scale_color_manual(values=c('quantile_0.01'='#C7361D', 'quantile_0.99'='#3A4ED0')) +
-  geom_vline(xintercept=0, color="black") +
-  labs(y=NULL, x="Edge Shift (km/yr) \n                 ", title="West Coast") +
-  scale_x_continuous(breaks=seq(-60, 60, 10), limits=c(-68, 68)) + 
+  geom_line() + 
+  geom_errorbar(aes(ymin=Estimate-Std.Error, ymax=Estimate+Std.Error, group=quantile, color=quantile)) + 
+  facet_wrap(~species, ncol=5)+
+  theme(legend.position = "none") +
+  labs(x="Year", y="Northwesting (km)") +
   theme_bw() +
-  theme(legend.position = "none",
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        text=element_text(family="sans",size=10,color="black"),
-        legend.text = element_text(size=10),
-        axis.title=element_text(family="sans",size=12,color="black"),
-        axis.text=element_text(family="sans",size=10,color="black"),
-        plot.margin=unit(c(5.5, 15, 5.5, 5.5), "points")) +
+  theme( axis.text.x = element_text(angle = 90, hjust = 1), legend.position="bottom")+
   NULL
-wc.edge.gg
+ggsave(ebs.gg, filename=here("results","VAST_edges_ebs_no_SE_filter.png"),height=12,width=7,dpi=160, scale=1.1)
 
-ebs.edge.gg <- edge.shift.df %>%
-  filter(region=="ebs") %>%
-  ggplot(aes(y=species, x=median, xmin=lower, xmax=upper, color=quantile, fill=quantile, shape=niche.group)) +
-  geom_errorbarh() +
+wc.gg <- edge.spp.dat %>%
+  filter(region=="wc",
+         axis=="coast_km") %>% 
+  ggplot(aes(x=year, y=Estimate, group=quantile, color=quantile)) +
   geom_point() +
-  scale_color_manual(values=c('quantile_0.01'='#C7361D', 'quantile_0.99'='#3A4ED0')) +
-  geom_vline(xintercept=0, color="black") +
-  labs(y=NULL, x="Edge Shift (km/yr) \n                 ", title="Eastern Bering Sea") +
-   scale_x_continuous(breaks=seq(-60, 60, 10), limits=c(-75, 75)) + 
+  geom_line() + 
+  geom_errorbar(aes(ymin=Estimate-Std.Error, ymax=Estimate+Std.Error, group=quantile, color=quantile)) + 
+  facet_wrap(~species, ncol=5)+
+  theme(legend.position = "none") +
+  labs(x="Year", y="Coastal Distance (km)") +
   theme_bw() +
-  theme(legend.position = "none",
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        text=element_text(family="sans",size=10,color="black"),
-        legend.text = element_text(size=10),
-        axis.title=element_text(family="sans",size=12,color="black"),
-        axis.text=element_text(family="sans",size=10,color="black"),
-        plot.margin=unit(c(5.5, 15, 5.5, 5.5), "points")) +
+  theme( axis.text.x = element_text(angle = 90, hjust = 1), legend.position="bottom")+
   NULL
-ebs.edge.gg
-
-ggsave(neus.edge.gg, filename=here("results","neus_spp_edge_shifts.png"), height=10, width=5, dpi=160, scale=1.2)
-ggsave(wc.edge.gg, filename=here("results","wc_spp_edge_shifts.png"), height=10, width=5, dpi=160, scale=1.2)
-ggsave(ebs.edge.gg, filename=here("results","ebs_spp_edge_shifts.png"), height=10, width=5, dpi=160, scale=1.2)
+ggsave(wc.gg, filename=here("results","VAST_edges_wc_no_SE_filter.png"),height=12,width=7,dpi=160, scale=1.1)
+rm(list=ls())

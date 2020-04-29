@@ -401,43 +401,6 @@ dat.predict.niche <- dat.predict %>%
   filter(!predicted.var=="predict.sstmean")
 write_csv(dat.predict.niche, here("processed-data","species_thermal_niche_v_time.csv"))
 
-# plot thermal niches over time
-neus.thermal.niche.gg <- dat.predict %>%
-  filter(region=="neus") %>%
-  ggplot() +
-  geom_line(aes(x=year_match, y=sst, group=predicted.var, color=predicted.var)) +
-  geom_point(aes(x=year_match, y=sst, group=predicted.var, color=predicted.var)) +
-  geom_errorbar(aes(x=year_match, ymax=sst+sstSE, ymin=sst-sstSE, group=predicted.var, color=predicted.var))+
-  facet_wrap(quantile ~ species) +
-  theme_bw() +
-  theme(legend.position = "bottom")
-neus.thermal.niche.gg
-ggsave(neus.thermal.niche.gg, filename=here("results","neus_edge_niches_time.png"),dpi=160, width=12,height=11,scale=1.3)
-
-wc.thermal.niche.gg <- dat.predict %>%
-  filter(region=="wc")%>%
-  ggplot(aes(x=year_match, y=sst, group=predicted.var, color=predicted.var)) +
-  geom_line() +
-  geom_point() +
-  geom_errorbar(aes(x=year_match, ymax=sst+sstSE, ymin=sst-sstSE, group=predicted.var, color=predicted.var))+
-  facet_wrap(quantile ~ species)+
-  theme_bw() +
-  theme(legend.position = "bottom")
-wc.thermal.niche.gg
-ggsave(wc.thermal.niche.gg, filename=here("results","wc_edge_niches_time.png"),dpi=160, width=12,height=11,scale=1.3)
-
-ebs.thermal.niche.gg <- dat.predict %>%
-  filter(region=="ebs")%>%
-  ggplot(aes(x=year_match, y=sst, group=predicted.var, color=predicted.var)) +
-  geom_line() +
-  geom_point() +
-  geom_errorbar(aes(x=year_match, ymax=sst+sstSE, ymin=sst-sstSE, group=predicted.var, color=predicted.var))+
-  facet_wrap(quantile ~ species)+
-  theme_bw() +
-  theme(legend.position = "bottom")
-ebs.thermal.niche.gg
-ggsave(ebs.thermal.niche.gg, filename=here("results","ebs_edge_niches_time.png"),dpi=160, width=12,height=11,scale=1.3)
-
 
 #######################
 ### estimate change in edge thermal niche over time
