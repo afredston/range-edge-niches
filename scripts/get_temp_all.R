@@ -19,6 +19,12 @@ ebs_lonrange <- c(-179.5, -154)
 
 hadisst <- "erdHadISST"
 neus_hadisst_years <- c(1967, 2018)
+hadisst_fields <- "sst"
+neus_hadisst <- get_rerddap(datasetID = hadisst, latrange = neus_latrange, lonrange = neus_lonrange, startyear=neus_hadisst_years[1], endyear=neus_hadisst_years[2], fields=hadisst_fields, verbose=TRUE)
+
+
+hadisst <- "erdHadISST"
+neus_hadisst_years <- c(1967, 2018)
 wc_hadisst_years <- c(1976, 2018) # don't bother downloading early years for regions with no trawl data 
 ebs_hadisst_years <- c(1981, 2018)
 
@@ -38,6 +44,7 @@ ebs_oisst <- get_rerddap(datasetID = oisst, latrange = ebs_latrange, lonrange = 
 
 # if there is an error that says "Error in R_nc4_open: NetCDF: Unknown file format"
 # find the directory C:\Users\alexafh\AppData\Local\Cache/R/rerddap/ and delete its contents 
+
 
 dfs <- list(neus_oisst, neus_hadisst, wc_hadisst, wc_oisst,ebs_hadisst, ebs_oisst)
 names <- c("neus_oisst", "neus_hadisst", "wc_hadisst", "wc_oisst","ebs_hadisst", "ebs_oisst")

@@ -28,64 +28,8 @@ here <- here::here # fix conflict with lubridate
 select <- dplyr::select
 
 ##############
-## rasterize temperature data
+## make bathymetric mask for each region 
 ##############
-
-proj4 <- CRS("+proj=longlat +ellps=WGS84 +no_defs")
-
-# get raw datasets and convert to raster brick 
-# note that spatialpixelsdataframe assumes points are centers of cells
-neus.hadisst.df <- read_rds(here("processed-data","neus_hadisst_raw.rds"))$neus_hadisst %>% 
-  filter(!is.na(sst)) 
-
-testdf <- neus.hadisst.df %>% 
-  filter(time==max(time)) %>%
-  mutate(time=as.Date(time))
-
-testspdf <- SpatialPixelsDataFrame(points=testdf[,c('lon','lat')], data=testdf %>% select(-lat, -lon), proj4string=proj4)
-
-testraster <- raster(testspdf)
-teststack <- stack(testspdf)
-
-spg <- testdf
-coordinates(spg) <- ~lon+lat
-gridded(spg) <- TRUE
-rasterdf <- raster(spg)
-rasterdf
-
-jc <- neus.hadisst.df %>% 
-  mutate(time = as.Date(time)) %>% 
-  rename("x"=lon,"y"=lat) %>% 
-  select(x, y, everything()) %>% # put x before y for rasterFromXYZ
-  pivot_wider(names_from="time",values_from="sst") %>%
-  rasterFromXYZ(crs=proj4)
-
-
-# this works to produce a single raster 
-
-stack_time_slices <- function(sstdf){
-  slices <- unique(sstdf$time)
-  slice1 <- slices[1]
-  dat <- sstdf %>% filter(time==slice1) %>% select(lat, lon, sst)
-  pixels <- SpatialPixelsDataFrame(points=dat[,c('lon','lat')], data=dat %>% select(-lat, -lon), proj4string=proj4)
-  out <- stack(pixels)
-  names(out) <- paste0(slice1)
-  for(i in tail(slices, -1)){
-    dat <- sstdf %>% filter(time==i) %>% select(lat, lon, sst)
-    pixels <- SpatialPixelsDataFrame(points=dat[,c('lon','lat')], data=dat %>% select(-lat, -lon), proj4string=proj4)
-    slice <- stack(pixels)
-    names(slice) <- paste0(i)
-    out <- stack(out, slice)
-  }
-  return(out)
-}
-
-# testdf <- neus.hadisst.df %>% filter(time==max(time)) %>% select(-time)
-# testspdf <- SpatialPixelsDataFrame(points=testdf[,c('lon','lat')], data=testdf %>% select(-lat, -lon), proj4string=proj4)
-# testraster <- raster(testspdf)
-# plot(testraster)
-# teststack <- stack(testspdf)
-# names(teststack) <- "timeee"
 
 # define bounding boxes for masks 
 neus_latrange <- c(35, 45)
@@ -95,79 +39,6 @@ wc_lonrange <- c(-126, -117)
 ebs_latrange <- c(54, 66)
 ebs_lonrange <- c(-179.5, -154)
 
-# compare hadisst and oisst without bathymetric masks (since they should have been downloaded for the same bounding box)
-neus_oisst_all <- read_rds(here("processed-data","neus_oisst_raw.rds"))$neus_oisst %>% 
-  filter(!is.na(sst)) %>% 
-  mutate(
-    time = lubridate::ymd(str_sub(time, 1, 10)),
-    year = lubridate::year(time),
-    month = lubridate::month(time)
-  ) %>% 
-  dplyr::select(-altitude) 
-
-neus_oisst_summary <- neus_oisst_all %>%
-  group_by(lat, lon, year, month) %>%
-  mutate(sst.month.mean = mean(sst)) %>%
-  ungroup() %>%
-  select(lat, lon, year, month, sst.month.mean) %>%
-  distinct() %>%
-  group_by(lat, lon, year) %>%
-  mutate(cell.min = min(sst.month.mean),
-         cell.mean = mean(sst.month.mean),
-         cell.max = max(sst.month.mean)) %>%
-  ungroup() %>%
-  select(lat, lon, year, cell.mean, cell.max) %>%
-  distinct()%>%
-  group_by(year) %>%
-  mutate(oisst_only_mean = mean(cell.mean),
-         oisst_only_max = mean(cell.max)
-  ) %>%
-  ungroup() %>%
-  select(year, oisst_only_mean, oisst_only_max) %>%
-  distinct() 
-
-neus_hadisst_all <- read_rds(here("processed-data","neus_hadisst_raw.rds"))$neus_hadisst %>% 
-  filter(!is.na(sst)) %>% 
-  mutate(
-    time = lubridate::ymd(str_sub(time, 1, 10)),
-    year = lubridate::year(time),
-    month = lubridate::month(time)
-  ) 
-
-neus_hadisst_summary <- neus_hadisst_all %>%
-  group_by(lat, lon, year) %>%
-  mutate(cell.min = min(sst),
-         cell.mean = mean(sst),
-         cell.max = max(sst)) %>%  
-  ungroup() %>%
-  select(lat, lon, year, cell.mean, cell.max) %>%
-  distinct()%>%
-  group_by(year) %>%
-  mutate(hadisst_only_mean = mean(cell.mean),
-         hadisst_only_max = mean(cell.max)) %>%
-  ungroup() %>%
-  select(year, hadisst_only_mean, hadisst_only_max) %>%
-  distinct() 
-
-
-neustest <- neus_hadisst_summary %>%
-  left_join(neus_oisst_summary, by="year") %>%
-  ggplot() +
-  geom_line(aes(x=year, y=oisst_only_max), color="magenta") +
-  geom_line(aes(x=year, y=hadisst_only_max), color="darkorange") +
-  scale_x_continuous(limits = c(1967, 2018), breaks=seq(1968, 2017, 4), expand = c(0, 0)) +
-  labs(x="Year", y="Temperature (°C)") +
-  theme_bw() +
-  theme(text=element_text(family="sans",size=12,color="black"),
-        legend.position="none",
-        axis.text=element_text(family="sans",size=8,color="black"), 
-        axis.text.x = element_text(angle = 90, hjust = 1), 
-        axis.title=element_text(family="sans",size=12,color="black"),
-        strip.text.x = element_blank(),
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank()) + 
-  NULL
-
 # choose how far out into the ocean you want temperature data
 ebs.depth.cutoff <- 300
 neus.depth.cutoff <- 300
@@ -176,7 +47,7 @@ wc.depth.cutoff <- 600 # WC shelf is very steep so I increased this from 300m in
 # get masks for each region 
 wc.bathy <- get.bathy(lon = wc_lonrange, lat = wc_latrange, visualize = F, res = 4) 
 neus.bathy <- get.bathy(lon = neus_lonrange, lat = neus_latrange, visualize = F, res = 4) 
-ebs.bathy <- get.bathy(lon = ebs_lonrange, lat = ebs_latrange, visualize = F, res = 15) 
+ebs.bathy <- get.bathy(lon = ebs_lonrange, lat = ebs_latrange, visualize = F, res = 4) 
 
 # get CRS for future reference
 bathy.crs <- wc.bathy %>% # works for all regions 
@@ -216,68 +87,57 @@ neus.bathy.mask <- neus.bathy %>%
   st_union()
 # plot(neus.bathy.mask)
 
-# filter all temperature dataframes by the mask, and correct the time column 
-# can be very slow 
+##############
+## rasterize temperature data and resample coarser rasters
+##############
 
-# import the COBE data manually 
-# note that it's ginormous because I haven't cropped it at all yet 
-cobe.raw <- raster::stack(here("raw-data","sst.mon.mean.nc"))
-cobe.tidy <- raster::as.data.frame(cobe.raw, xy=TRUE)  %>% 
-  pivot_longer(cols=c(-x, -y), names_to="date", values_to="sst") %>%
+proj4 <- CRS("+proj=longlat +ellps=WGS84 +no_defs")
+
+# function to convert SST into a raster brick 
+rasterFromSST <- function(sstdf){
+  out <- sstdf %>% 
+    mutate(time = as.Date(time)) %>% 
+    rename("x"=lon,"y"=lat) %>% 
+    select(x, y, everything()) %>% # put x before y for rasterFromXYZ
+    pivot_wider(names_from="time",values_from="sst") %>%
+    rasterFromXYZ(crs=proj4)
+  return(out)
+}
+
+# get raw datasets 
+
+# should have columns x, y, time, sst
+neus.hadisst.df <- read_rds(here("processed-data","neus_hadisst_raw.rds"))$neus_hadisst %>% 
+  filter(!is.na(sst)) 
+wc.hadisst.df <- read_rds(here("processed-data","wc_hadisst_raw.rds")) %>% 
+  filter(!is.na(sst)) 
+ebs.hadisst.df <- read_rds(here("processed-data","ebs_hadisst_raw.rds")) %>% 
   filter(!is.na(sst)) 
 
-cobe.sf <- cobe.tidy %>% 
-  mutate(x= ifelse(x >= 180, x-360, x)) %>% # change lon to -180/+180 from +360
-  st_as_sf(coords=c("x","y"), crs = bathy.crs) 
+neus.oisst.df <- read_rds(here("processed-data","neus_oisst_raw.rds"))$neus_oisst %>% 
+  filter(!is.na(sst)) %>%
+  select(-altitude)
+wc.oisst.df <- read_rds(here("processed-data","wc_oisst_raw.rds"))$wc_oisst %>% 
+  filter(!is.na(sst)) %>%
+  select(-altitude)
+ebs.oisst.df <- read_rds(here("processed-data","ebs_oisst_raw.rds"))$ebs_oisst %>% 
+  filter(!is.na(sst)) %>%
+  select(-altitude)
 
-# cobe
-neus_cobe <- cobe.sf %>%
-  st_intersection(neus.bathy.mask)%>% 
-  dplyr::select(-layer) %>%
-  sfc_as_cols() %>% 
-  as.data.table() %>%
-  dplyr::select(-geometry) %>%
-  distinct() %>% 
-  mutate(time = gsub("X","",date)) %>%
-  mutate(
-    time = lubridate::ymd(str_sub(time, 1, 10)),
-    year = lubridate::year(time),
-    month = lubridate::month(time)
-  ) %>%
-  dplyr::select(-date) %>% 
-  filter(year>=1967)
+# convert to raster brick 
+neus.hadisst.raster <- rasterFromSST(neus.hadisst.df)
+wc.hadisst.raster <- rasterFromSST(wc.hadisst.df)
+ebs.hadisst.raster <- rasterFromSST(ebs.hadisst.df)
 
-wc_cobe <- cobe.sf %>%
-  st_intersection(wc.bathy.mask)%>% 
-  dplyr::select(-layer) %>%
-  sfc_as_cols() %>% 
-  as.data.table() %>%
-  dplyr::select(-geometry) %>%
-  distinct() %>% 
-  mutate(time = gsub("X","",date)) %>%
-  mutate(
-    time = lubridate::ymd(str_sub(time, 1, 10)),
-    year = lubridate::year(time),
-    month = lubridate::month(time)
-  ) %>%
-  dplyr::select(-date) %>% 
-  filter(year>=1967)
+neus.oisst.raster <- rasterFromSST(neus.oisst.df)
+wc.oisst.raster <- rasterFromSST(wc.oisst.df)
+ebs.oisst.raster <- rasterFromSST(ebs.oisst.df)
 
-ebs_cobe <- cobe.sf %>%
-  st_intersection(ebs.bathy.mask)%>% 
-  dplyr::select(-layer) %>%
-  sfc_as_cols() %>% 
-  as.data.table() %>%
-  dplyr::select(-geometry) %>%
-  distinct() %>% 
-  mutate(time = gsub("X","",date)) %>%
-  mutate(
-    time = lubridate::ymd(str_sub(time, 1, 10)),
-    year = lubridate::year(time),
-    month = lubridate::month(time)
-  ) %>%
-  select(-date) %>% 
-  filter(year>=1967)
+# resample the HadISST data to the same resolution as the OISST data 
+
+##############
+## crop all to bathymetric masks 
+##############
 
 # hadisst
 wc_hadisst <- read_rds(here("processed-data","wc_hadisst_raw.rds")) %>% 
