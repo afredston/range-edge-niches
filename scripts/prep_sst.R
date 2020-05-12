@@ -7,6 +7,11 @@ library(sf)
 library(tidyverse)
 library(here)
 library(tabularaster)
+library(lubridate)
+library(purrr)
+
+map <- purrr::map
+here <- here::here
 
 source(here("functions","sfc_as_cols.R"))
 
@@ -185,27 +190,105 @@ if(!file.exists(neus.bathy.file)) {
 ### crop SST datasets to extent of masks 
 #####################
 
-neus_hadisst_crop <- mask(neus_hadisst_resample, as_Spatial(neus.bathy.mask))
+# note that because HadISST is not downloaded with date in a date format (it's a character string), it ends up as the layer title rather than the @z dimension; let's fix that here 
+
+neus_hadisst_times <- names(neus_hadisst_resample) %>%
+  str_remove("X") %>%
+  as.integer() %>%
+  as_datetime()
+
+wc_hadisst_times <- names(wc_hadisst_resample) %>%
+  str_remove("X") %>%
+  as.integer() %>%
+  as_datetime()
+
+ebs_hadisst_times <- names(ebs_hadisst_resample) %>%
+  str_remove("X") %>%
+  as.integer() %>%
+  as_datetime()
+
+neus_hadisst_crop <- mask(neus_hadisst_resample, as_Spatial(neus.bathy.mask)) 
 neus_oisst_crop1 <- mask(neus_oisst_brick1, as_Spatial(neus.bathy.mask))
 neus_oisst_crop2 <- mask(neus_oisst_brick2, as_Spatial(neus.bathy.mask))
 neus_oisst_crop3 <- mask(neus_oisst_brick3, as_Spatial(neus.bathy.mask))
 neus_oisst_crop4 <- mask(neus_oisst_brick4, as_Spatial(neus.bathy.mask))
 
-wc_hadisst_crop <- mask(wc_hadisst_resample, as_Spatial(wc.bathy.mask))
+wc_hadisst_crop <- mask(wc_hadisst_resample, as_Spatial(wc.bathy.mask))%>%
+  setZ(z=wc_hadisst_times, name="time")
 wc_oisst_crop1 <- mask(wc_oisst_brick1, as_Spatial(wc.bathy.mask))
 wc_oisst_crop2 <- mask(wc_oisst_brick2, as_Spatial(wc.bathy.mask))
 wc_oisst_crop3 <- mask(wc_oisst_brick3, as_Spatial(wc.bathy.mask))
-wc_oiss_crop4 <- mask(wc_oisst_brick4, as_Spatial(wc.bathy.mask))
+wc_oisst_crop4 <- mask(wc_oisst_brick4, as_Spatial(wc.bathy.mask))
 
-ebs_hadisst_crop <- mask(ebs_hadisst_resample, as_Spatial(ebs.bathy.mask))
+ebs_hadisst_crop <- mask(ebs_hadisst_resample, as_Spatial(ebs.bathy.mask))%>%
+  setZ(z=ebs_hadisst_times, name="time")
 ebs_oisst_crop1 <- mask(ebs_oisst_brick1, as_Spatial(ebs.bathy.mask))
 ebs_oisst_crop2 <- mask(ebs_oisst_brick2, as_Spatial(ebs.bathy.mask))
 ebs_oisst_crop3 <- mask(ebs_oisst_brick3, as_Spatial(ebs.bathy.mask))
 ebs_oisst_crop4 <- mask(ebs_oisst_brick4, as_Spatial(ebs.bathy.mask))
 
+# HadISST does have dates in the @z dimension, but for some reason they get dropped in resample() (maybe because they're in character format?). let's fix that now, by setting the @z dimension of the final cropped object to the dates from the original file: 
+neus_hadisst_crop <- setZ(x=neus_hadisst_crop, z=as_datetime(unlist(neus_hadisst_brick@z)))
+wc_hadisst_crop <- setZ(x=wc_hadisst_crop, z=as_datetime(unlist(wc_hadisst_brick@z)))
+ebs_hadisst_crop <- setZ(x=ebs_hadisst_crop, z=as_datetime(unlist(ebs_hadisst_brick@z)))
+
 #####################
 ### convert rasters to tidy dataframes and save  
 #####################
 
-neus_hadisst_df <- tabularaster::as_tibble(neus_hadisst_crop, cell=FALSE, dim=TRUE, values=TRUE, xy=TRUE) %>% filter(!is.na(cellvalue))
-# this works but the time dimension is just listed as an integer for the time step. need to somehow preserve time as a date in the raster?
+# convert to dataframe, fix column names, and make date into date format 
+neus_hadisst_df <- tabularaster::as_tibble(neus_hadisst_crop, cell=FALSE, dim=TRUE, values=TRUE, xy=TRUE) %>% 
+  filter(!is.na(cellvalue))%>%
+  rename("sst" = cellvalue,
+         "date" = dimindex)%>% 
+  mutate(date = as_date(date))
+wc_hadisst_df <- tabularaster::as_tibble(wc_hadisst_crop, cell=FALSE, dim=TRUE, values=TRUE, xy=TRUE) %>% 
+  filter(!is.na(cellvalue))%>%
+  rename("sst" = cellvalue,
+         "date" = dimindex)%>%
+  mutate(date = as_date(date))
+ebs_hadisst_df <- tabularaster::as_tibble(ebs_hadisst_crop, cell=FALSE, dim=TRUE, values=TRUE, xy=TRUE) %>% 
+  filter(!is.na(cellvalue))%>%
+  rename("sst" = cellvalue,
+         "date" = dimindex) %>%
+  mutate(date = as_date(date))
+
+# fewer issues with OISST dates, can just convert them to date format here 
+
+# convert all the OISST bricks to data frames 
+
+# make function that takes cropped OISST raster brick and converts it to a dataframe using tabularaster, with some tidying 
+oisst_to_df <- function(oisst){
+  out <- tabularaster::as_tibble(oisst, cell=FALSE, dim=TRUE, values=TRUE, xy=TRUE) %>% 
+    filter(!is.na(cellvalue)) %>%
+    mutate(dimindex = as_datetime(as.integer(dimindex))) %>%
+    rename("sst" = cellvalue,
+           "date" = dimindex)
+  return(out)
+}
+
+# get a list of all the rasters 
+oisst_crop_list <- c(neus_oisst_crop1,neus_oisst_crop2,neus_oisst_crop3,neus_oisst_crop4,wc_oisst_crop1,wc_oisst_crop2,wc_oisst_crop3,wc_oisst_crop4,ebs_oisst_crop1,ebs_oisst_crop2,ebs_oisst_crop3,ebs_oisst_crop4)
+
+# apply oisst_to_df to all rasters
+oisst_df_list <- map(oisst_crop_list, oisst_to_df)
+
+# give them sensible names 
+names(oisst_df_list) <- c("neus_oisst_df1","neus_oisst_df2","neus_oisst_df3","neus_oisst_df4","wc_oisst_df1","wc_oisst_df2","wc_oisst_df3","wc_oisst_df4","ebs_oisst_df1","ebs_oisst_df2","ebs_oisst_df3","ebs_oisst_df4")
+
+# unlist dfs into environment 
+list2env(oisst_df_list, .GlobalEnv)
+
+# make summary OISST dfs
+neus_oisst_df <- bind_rows(neus_oisst_df1, neus_oisst_df2, neus_oisst_df3, neus_oisst_df4)
+wc_oisst_df <- bind_rows(wc_oisst_df1, wc_oisst_df2, wc_oisst_df3, wc_oisst_df4)
+ebs_oisst_df <- bind_rows(ebs_oisst_df1, ebs_oisst_df2, ebs_oisst_df3, ebs_oisst_df4)
+
+# save all dfs
+saveRDS(neus_hadisst_df, here("processed-data","neus_hadisst_df.rds"))
+saveRDS(neus_oisst_df, here("processed-data","neus_oisst_df.rds"))
+saveRDS(wc_hadisst_df, here("processed-data","wc_hadisst_df.rds"))
+saveRDS(wc_oisst_df, here("processed-data","wc_oisst_df.rds"))
+saveRDS(ebs_hadisst_df, here("processed-data","ebs_hadisst_df.rds"))
+saveRDS(ebs_oisst_df, here("processed-data","ebs_oisst_df.rds"))
+rm(list=ls())
