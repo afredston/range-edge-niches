@@ -294,11 +294,49 @@ wc_oisst_df <- bind_rows(wc_oisst_df1, wc_oisst_df2, wc_oisst_df3, wc_oisst_df4)
 ebs_oisst_df <- bind_rows(ebs_oisst_df1, ebs_oisst_df2, ebs_oisst_df3, ebs_oisst_df4)
 
 #####################
-### center data for comparison and save
+### calculate climatologies 
 #####################
 
-# OISST and hadISST have different means, meaning they cannot just be glued together at 1982
-# 
+# in order to join these datasets, we need to do a mean bias correction, and also aggregate OISST up to monthly resolution (from daily) 
+
+neus_hadisst_df_clim <- neus_hadisst_df %>%
+  group_by(x, y, month) %>%
+  mutate(sst_month_clim = mean(sst)) %>% # get climatology by month (average conditions across all instances of that month in that cell) 
+  ungroup() %>%
+  rename("date_join"=time) %>%
+  mutate(sst_month_anom = sst-sst_month_clim, # get anomaly by month (how much hotter/colder that month is relative to the average )
+         dataset = "hadisst",
+         sst_month_clim = NA) %>% # going to use the OISST climatology 
+  select(-sst)
+
+neus_oisst_df_clim <- neus_oisst_df %>%
+  group_by(x, y, year, month)  %>%
+  mutate(sst_month = mean(sst)) %>% # convert into monthly means for comparability with HadISST before doing anything else
+  ungroup() %>%
+  select(x, y, year, month, sst_month) %>%
+  distinct() %>%
+  group_by(x, y, month) %>%
+  mutate(sst_month_clim = mean(sst_month)) %>%
+  ungroup() %>%
+  mutate(sst_month_anom = sst_month-sst_month_clim,
+         date_join = as_date(paste0(year, "-", month, "-16")),
+         dataset="oisst") %>% # prepare for joining to hadISST 
+  select(-sst_month)
+
+neus_df_clim <- neus_hadisst_df_clim %>%
+  filter(date_join < min(neus_oisst_df_clim$date_join)) %>% # keep only early dates 
+  bind_rows(neus_oisst_df_clim) %>%
+  arrange(year) %>%
+  group_by(month) %>%
+  tidyr::fill(sst_month_clim, .direction="up") %>% # populate NA climatologies in earlier years (hadISST) with OISST climatologies 
+  ungroup() %>%
+  mutate(sst = sst_month_clim + sst_month_anom) 
+plot(neus_df_clim$date_join, neus_df_clim$sst)
+## RIGHT NOW THE EARLY YEARS ARE TRUNCATED AND DON'T HAVE ANY HOT POINTS--DON'T KNOW WHY YET
+
+
+ggplot() + geom_density(data=neus_hadisst_df_clim, aes(x=sst_month_anom), color="red") +  geom_density(data=neus_oisst_df_clim, aes(x=sst_month_anom), color="blue")
+
 
 # save all dfs
 saveRDS(neus_hadisst_df, here("processed-data","neus_hadisst_df.rds"))
