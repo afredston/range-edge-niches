@@ -233,25 +233,31 @@ wc_hadisst_crop <- setZ(x=wc_hadisst_crop, z=as_datetime(unlist(wc_hadisst_brick
 ebs_hadisst_crop <- setZ(x=ebs_hadisst_crop, z=as_datetime(unlist(ebs_hadisst_brick@z)))
 
 #####################
-### convert rasters to tidy dataframes and save  
+### convert rasters to tidy dataframes 
 #####################
 
 # convert to dataframe, fix column names, and make date into date format 
 neus_hadisst_df <- tabularaster::as_tibble(neus_hadisst_crop, cell=FALSE, dim=TRUE, values=TRUE, xy=TRUE) %>% 
   filter(!is.na(cellvalue))%>%
   rename("sst" = cellvalue,
-         "date" = dimindex)%>% 
-  mutate(date = as_date(date))
+         "time" = dimindex)%>%
+  mutate(time = as_date(time),
+         year = year(time),
+         month=month(time))
 wc_hadisst_df <- tabularaster::as_tibble(wc_hadisst_crop, cell=FALSE, dim=TRUE, values=TRUE, xy=TRUE) %>% 
   filter(!is.na(cellvalue))%>%
   rename("sst" = cellvalue,
-         "date" = dimindex)%>%
-  mutate(date = as_date(date))
+         "time" = dimindex)%>%
+  mutate(time = as_date(time),
+         year = year(time),
+         month=month(time))
 ebs_hadisst_df <- tabularaster::as_tibble(ebs_hadisst_crop, cell=FALSE, dim=TRUE, values=TRUE, xy=TRUE) %>% 
   filter(!is.na(cellvalue))%>%
   rename("sst" = cellvalue,
-         "date" = dimindex) %>%
-  mutate(date = as_date(date))
+         "time" = dimindex) %>%
+  mutate(time = as_date(time),
+         year = year(time),
+         month=month(time))
 
 # fewer issues with OISST dates, can just convert them to date format here 
 
@@ -261,9 +267,12 @@ ebs_hadisst_df <- tabularaster::as_tibble(ebs_hadisst_crop, cell=FALSE, dim=TRUE
 oisst_to_df <- function(oisst){
   out <- tabularaster::as_tibble(oisst, cell=FALSE, dim=TRUE, values=TRUE, xy=TRUE) %>% 
     filter(!is.na(cellvalue)) %>%
-    mutate(dimindex = as_datetime(as.integer(dimindex))) %>%
     rename("sst" = cellvalue,
-           "date" = dimindex)
+           "time" = dimindex) %>%
+    mutate(time = as_datetime(as.integer(time)),
+           time = as_date(time),
+           year = year(time),
+           month = month(time)) 
   return(out)
 }
 
@@ -283,6 +292,13 @@ list2env(oisst_df_list, .GlobalEnv)
 neus_oisst_df <- bind_rows(neus_oisst_df1, neus_oisst_df2, neus_oisst_df3, neus_oisst_df4)
 wc_oisst_df <- bind_rows(wc_oisst_df1, wc_oisst_df2, wc_oisst_df3, wc_oisst_df4)
 ebs_oisst_df <- bind_rows(ebs_oisst_df1, ebs_oisst_df2, ebs_oisst_df3, ebs_oisst_df4)
+
+#####################
+### center data for comparison and save
+#####################
+
+# OISST and hadISST have different means, meaning they cannot just be glued together at 1982
+# 
 
 # save all dfs
 saveRDS(neus_hadisst_df, here("processed-data","neus_hadisst_df.rds"))
