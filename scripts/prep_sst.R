@@ -299,6 +299,7 @@ ebs_oisst_df <- bind_rows(ebs_oisst_df1, ebs_oisst_df2, ebs_oisst_df3, ebs_oisst
 
 # in order to join these datasets, we need to do a mean bias correction, and also aggregate OISST up to monthly resolution (from daily) 
 
+# SHOULD THESE ANOMALIES BE BASED ON 1968-1982 OR 1968-2018?
 neus_hadisst_df_clim <- neus_hadisst_df %>%
   group_by(x, y, month) %>%
   mutate(sst_month_clim = mean(sst)) %>% # get climatology by month (average conditions across all instances of that month in that cell) 
@@ -311,10 +312,7 @@ neus_hadisst_df_clim <- neus_hadisst_df %>%
 
 neus_oisst_df_clim <- neus_oisst_df %>%
   group_by(x, y, year, month)  %>%
-  mutate(sst_month = mean(sst)) %>% # convert into monthly means for comparability with HadISST before doing anything else
-  ungroup() %>%
-  select(x, y, year, month, sst_month) %>%
-  distinct() %>%
+  summarise(sst_month = median(sst)) %>% # convert into monthly medians for comparability with HadISST before doing anything else; using median instead of mean because it is less sensitive to outliers
   group_by(x, y, month) %>%
   mutate(sst_month_clim = mean(sst_month)) %>%
   ungroup() %>%
@@ -323,20 +321,18 @@ neus_oisst_df_clim <- neus_oisst_df %>%
          dataset="oisst") %>% # prepare for joining to hadISST 
   select(-sst_month)
 
+#####################
+### merge datasets and write out 
+#####################
+
 neus_df_clim <- neus_hadisst_df_clim %>%
   filter(date_join < min(neus_oisst_df_clim$date_join)) %>% # keep only early dates 
   bind_rows(neus_oisst_df_clim) %>%
+  group_by(x, y, month) %>%
   arrange(year) %>%
-  group_by(month) %>%
-  tidyr::fill(sst_month_clim, .direction="up") %>% # populate NA climatologies in earlier years (hadISST) with OISST climatologies 
+  tidyr::fill(sst_month_clim, .direction="up") %>% # populate NA climatologies in earlier years (hadISST) with OISST climatologies (CELL-SPECIFIC)
   ungroup() %>%
   mutate(sst = sst_month_clim + sst_month_anom) 
-plot(neus_df_clim$date_join, neus_df_clim$sst)
-## RIGHT NOW THE EARLY YEARS ARE TRUNCATED AND DON'T HAVE ANY HOT POINTS--DON'T KNOW WHY YET
-
-
-ggplot() + geom_density(data=neus_hadisst_df_clim, aes(x=sst_month_anom), color="red") +  geom_density(data=neus_oisst_df_clim, aes(x=sst_month_anom), color="blue")
-
 
 # save all dfs
 saveRDS(neus_hadisst_df, here("processed-data","neus_hadisst_df.rds"))
@@ -345,4 +341,70 @@ saveRDS(wc_hadisst_df, here("processed-data","wc_hadisst_df.rds"))
 saveRDS(wc_oisst_df, here("processed-data","wc_oisst_df.rds"))
 saveRDS(ebs_hadisst_df, here("processed-data","ebs_hadisst_df.rds"))
 saveRDS(ebs_oisst_df, here("processed-data","ebs_oisst_df.rds"))
-rm(list=ls())
+
+#####################
+### generate supplementary plots
+#####################
+
+# mean climatology of each dataset over time, for 1982 onwards 
+neus.reg.clim.hadisst <- neus_hadisst_df %>%
+  filter(year>=1982) %>%
+  group_by(x, y, month) %>%
+  summarise(sst_month_clim = mean(sst)) %>% # get climatology by month (average conditions across all instances of that month in that cell) 
+  ungroup() %>%
+  group_by(month) %>%
+  summarise(reg_month_clim = mean(sst_month_clim)) %>%
+  mutate(dataset="HadISST")
+
+neus.clim.time.gg <- neus_oisst_df_clim %>%
+  group_by(month) %>%
+  summarise(reg_month_clim = mean(sst_month_clim)) %>%
+  mutate(dataset="OISST") %>%
+  bind_rows(neus.reg.clim.hadisst) %>%
+  ggplot() +
+  geom_line(aes(x=month, y=reg_month_clim, group=dataset, color=dataset)) +
+  theme_bw() + 
+  scale_x_continuous(breaks=seq(1, 12, 1)) +
+  scale_y_continuous(breaks=seq(6, 22, 2)) +
+  labs(x="Month", y="Climatological Mean SST", title="Northeast") +
+  theme(legend.title=element_blank(),
+        legend.position=c(0.2, 0.8))
+neus.clim.time.gg
+
+# monthly anomalies in both datasets 
+neus.anom.time.gg <- neus_df_clim %>%
+  group_by(date_join, month, dataset) %>%
+  summarise(reg_month_anom = mean(sst_month_anom)) %>% # get mean across all cells in the region for that date 
+  ggplot(aes(x=date_join, y=reg_month_anom, color=month, group=month)) +
+  geom_line() +
+  facet_wrap(~dataset)
+neus.anom.time.gg
+  
+
+# 
+# neus.clim.time.gg <- neus_hadisst_df %>%
+#   group_by(x, y, month) %>%
+#   mutate(sst_month_clim = mean(sst)) %>% # recreate hadISST climatology 
+#   ungroup() %>%
+#   rename("date_join"=time) %>%
+#   group_by(year, date_join) %>%
+#   dplyr::summarise(month_clim_mean = mean(sst_month_clim)) %>% 
+#   ungroup() %>%
+#   group_by(year) %>%
+#   dplyr::summarise(year_clim_mean = mean(month_clim_mean)) %>% 
+#   ggplot() +
+#   geom_point(aes(x=year, y=year_clim_mean)) + 
+#   geom_line(aes(x=year, y=year_clim_mean)) 
+# 
+# test <- neus_hadisst_df %>%
+#   filter(x %in% c(-67.125, -68.125) & y %in% c(44.625, 44.375) & year %in% c(1970, 1972))
+# 
+# # get monthly climatologies within and then across cells 
+# test1 <- test %>%
+#   group_by(month) %>% 
+#   mutate(cell_monthly_climatology = mean(sst)) %>%
+#   ungroup() %>%
+#   group_by(time) %>%
+#   
+#   
+# neus.clim.time.gg  
