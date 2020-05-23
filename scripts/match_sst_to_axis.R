@@ -6,17 +6,12 @@ library(tidyverse)
 # starting with EBS because it's much faster
 #####
 ebs.survey.earliest <- 7
-ebs.oisst <- read_rds(here("processed-data","ebs_oisst.rds"))$ebs_oisst
-ebs.hadisst <- read_rds(here("processed-data","ebs_hadisst.rds"))$ebs_hadisst
+ebs.sst <- read_rds(here("processed-data","ebs_sst_corrected.rds"))
 ebs.vast.axes <- read_rds(here("processed-data","ebs_coords_conversion.rds")) %>%
   rename(vastLon=Lon, vastLat=Lat)
 
-# isolate coordinates of each temperature dataset 
-ebs.oisst.xy <- ebs.oisst %>%
-  dplyr::select(x, y) %>%
-  distinct()
-
-ebs.hadisst.xy <- ebs.hadisst %>%
+# isolate coordinates 
+ebs.xy <- ebs.sst %>%
   dplyr::select(x, y) %>%
   distinct()
 
@@ -32,49 +27,23 @@ get_axes <- function(lon, lat, axesdf) {
   return(tmp)
 }
 
-ebs.oisst.axes <- NULL
-for(i in 1:nrow(ebs.oisst.xy)){
-  tmp <- ebs.oisst[i,]
+ebs.sst.axes <- NULL
+for(i in 1:nrow(ebs.xy)){
+  tmp <- ebs.xy[i,]
   out <- get_axes(lon=tmp$x, lat=tmp$y, axesdf=ebs.vast.axes)
   out <- cbind(tmp$x, tmp$y, out)
-  ebs.oisst.axes <- rbind(ebs.oisst.axes, out)
+  ebs.sst.axes <- rbind(ebs.sst.axes, out)
 }
-ebs.oisst.axes <- ebs.oisst.axes %>% rename("x"=`tmp$x`, "y"=`tmp$y`)
+ebs.sst.axes <- ebs.sst.axes %>% rename("x"=`tmp$x`, "y"=`tmp$y`)
 
-ebs.hadisst.axes <- NULL
-for(i in 1:nrow(ebs.hadisst.xy)){
-  tmp <- ebs.hadisst[i,]
-  out <- get_axes(lon=tmp$x, lat=tmp$y, axesdf=ebs.vast.axes)
-  out <- cbind(tmp$x, tmp$y, out)
-  ebs.hadisst.axes <- rbind(ebs.hadisst.axes, out)
-}
-ebs.hadisst.axes <- ebs.hadisst.axes %>% rename("x"=`tmp$x`, "y"=`tmp$y`)
-
-# join VAST axes to temperature datasets 
-ebs.oisst.rotated <- ebs.oisst %>%
-  left_join(ebs.oisst.axes, by=c("x","y")) %>%
+# join VAST axes to temperature data 
+ebs.sst.rotated <- ebs.sst %>%
+  left_join(ebs.sst.axes, by=c("x","y")) %>%
   mutate(year_measured = ifelse(month < ebs.survey.earliest, year-1, year), 
          year_match = year_measured + 1) %>% 
   filter(year_match > min(year_match)) %>% 
   dplyr::select(-year) %>%
-  rename(lat=y, lon=x)%>%
-  mutate(dataset="oisst") %>%
-  select(-altitude)
-
-ebs.hadisst.rotated <- ebs.hadisst %>%
-  left_join(ebs.hadisst.axes, by=c("x","y")) %>%
-  mutate(year_measured = ifelse(month < ebs.survey.earliest, year-1, year), 
-         year_match = year_measured + 1) %>% 
-  filter(year_match > min(year_match)) %>% 
-  dplyr::select(-year) %>%
-  rename(lat=y, lon=x)%>%
-  mutate(dataset="hadisst")
-
-
-# create joint dataframe using hadISST to populate years where there's no OISST data 
-ebs.sst.rotated <- ebs.hadisst.rotated %>%
-  filter(time < min(ebs.oisst.rotated$time)) %>% 
-  full_join(ebs.oisst.rotated) # replace with rbind so it runs faster? 
+  rename(lat=y, lon=x) 
 
 saveRDS(ebs.sst.rotated, file=here("processed-data","ebs_sst_rotated.rds"))
 
@@ -106,59 +75,24 @@ get_length <- function(lon, lat, distdf) {
   return(tmp)
 }
 
-# load clean but raw OISST data, assign each point a coastal distance 
-# SLOW!
-wc.oisst.coastdist <- readRDS(here("processed-data","wc_oisst.rds"))$wc_oisst %>%
+# load raw SST data, assign each point a coastal distance. slow!
+wc.sst.coastdist <- readRDS(here("processed-data","wc_sst_corrected.rds")) %>%
   mutate(year_measured = ifelse(month < wc.survey.earliest, year-1, year), 
          year_match = year_measured + 1) %>% 
   filter(year_match > min(year_match)) %>% 
   dplyr::select(-year) %>%
   rowwise() %>%
   mutate(coast_km = (get_length(lon=x, lat=y, distdf = wc.vast.coords))) %>% 
-  ungroup()  %>%
-  mutate(dataset="oisst") %>%
-  select(-altitude)
+  ungroup()
 
-neus.oisst.coastdist <- readRDS(here("processed-data","neus_oisst.rds"))$neus_oisst %>%
+neus.sst.coastdist <- readRDS(here("processed-data","neus_sst_corrected.rds")) %>%
   mutate(year_measured = ifelse(month < neus.survey.earliest, year-1, year), 
          year_match = year_measured + 1) %>% 
   filter(year_match > min(year_match)) %>% 
   dplyr::select(-year) %>%
   rowwise() %>%
   mutate(coast_km = (get_length(lon=x, lat=y, distdf = neus.vast.coords))) %>% 
-  ungroup()  %>%
-  mutate(dataset="oisst")%>%
-  select(-altitude)
-
-# do the same for hadISST
-neus.hadisst.coastdist <- readRDS(here("processed-data","neus_hadisst.rds"))$neus_hadisst %>%
-  mutate(year_measured = ifelse(month < neus.survey.earliest, year-1, year), 
-         year_match = year_measured + 1) %>% 
-  filter(year_match > min(year_match)) %>% 
-  dplyr::select(-year) %>%
-  rowwise() %>%
-  mutate(coast_km = (get_length(lon=x, lat=y, distdf = neus.vast.coords))) %>% 
-  ungroup() %>%
-  mutate(dataset="hadisst")
-
-wc.hadisst.coastdist <- readRDS(here("processed-data","wc_hadisst.rds"))$wc_hadisst %>%
-  mutate(year_measured = ifelse(month < wc.survey.earliest, year-1, year), 
-         year_match = year_measured + 1) %>% 
-  filter(year_match > min(year_match)) %>% 
-  dplyr::select(-year) %>%
-  rowwise() %>%
-  mutate(coast_km = (get_length(lon=x, lat=y, distdf = wc.vast.coords))) %>% 
-  ungroup() %>%
-mutate(dataset="hadisst")
-
-# create joint dataframe using hadISST to populate years where there's no OISST data 
-neus.sst.coastdist <- neus.hadisst.coastdist %>%
-  filter(time < min(neus.oisst.coastdist$time)) %>% 
-  full_join(neus.oisst.coastdist)
-
-wc.sst.coastdist <- wc.hadisst.coastdist %>%
-  filter(time < min(wc.oisst.coastdist$time)) %>% 
-  full_join(wc.oisst.coastdist)
+  ungroup() 
 
 saveRDS(neus.sst.coastdist, here("processed-data","neus_sst_coastdist.rds"))
 saveRDS(wc.sst.coastdist, here("processed-data","wc_sst_coastdist.rds"))
