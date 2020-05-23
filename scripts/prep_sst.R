@@ -15,6 +15,8 @@ here <- here::here
 
 source(here("functions","sfc_as_cols.R"))
 
+generate_supplementary_plots = TRUE # toggle this off if you don't want the script to print out a bunch of extra plots exploring anomalies and climatologies of both SST datasets
+
 #####################
 ### get ERDDAP data
 #####################
@@ -299,15 +301,34 @@ ebs_oisst_df <- bind_rows(ebs_oisst_df1, ebs_oisst_df2, ebs_oisst_df3, ebs_oisst
 
 # in order to join these datasets, we need to do a mean bias correction, and also aggregate OISST up to monthly resolution (from daily) 
 
-# SHOULD THESE ANOMALIES BE BASED ON 1968-1982 OR 1968-2018?
 neus_hadisst_df_clim <- neus_hadisst_df %>%
   group_by(x, y, month) %>%
   mutate(sst_month_clim = mean(sst)) %>% # get climatology by month (average conditions across all instances of that month in that cell) 
   ungroup() %>%
   rename("date_join"=time) %>%
   mutate(sst_month_anom = sst-sst_month_clim, # get anomaly by month (how much hotter/colder that month is relative to the average )
-         dataset = "hadisst",
+         dataset = "HadISST",
          sst_month_clim = NA) %>% # going to use the OISST climatology 
+  select(-sst)
+
+wc_hadisst_df_clim <- wc_hadisst_df %>%
+  group_by(x, y, month) %>%
+  mutate(sst_month_clim = mean(sst)) %>% 
+  ungroup() %>%
+  rename("date_join"=time) %>%
+  mutate(sst_month_anom = sst-sst_month_clim,  
+         dataset = "HadISST",
+         sst_month_clim = NA) %>%  
+  select(-sst)
+
+ebs_hadisst_df_clim <- ebs_hadisst_df %>%
+  group_by(x, y, month) %>%
+  mutate(sst_month_clim = mean(sst)) %>% 
+  ungroup() %>%
+  rename("date_join"=time) %>%
+  mutate(sst_month_anom = sst-sst_month_clim,  
+         dataset = "HadISST",
+         sst_month_clim = NA) %>%  
   select(-sst)
 
 neus_oisst_df_clim <- neus_oisst_df %>%
@@ -318,7 +339,29 @@ neus_oisst_df_clim <- neus_oisst_df %>%
   ungroup() %>%
   mutate(sst_month_anom = sst_month-sst_month_clim,
          date_join = as_date(paste0(year, "-", month, "-16")),
-         dataset="oisst") %>% # prepare for joining to hadISST 
+         dataset="OISST") %>% # prepare for joining to hadISST 
+  select(-sst_month)
+
+wc_oisst_df_clim <- wc_oisst_df %>%
+  group_by(x, y, year, month)  %>%
+  summarise(sst_month = median(sst)) %>% 
+  group_by(x, y, month) %>%
+  mutate(sst_month_clim = mean(sst_month)) %>%
+  ungroup() %>%
+  mutate(sst_month_anom = sst_month-sst_month_clim,
+         date_join = as_date(paste0(year, "-", month, "-16")),
+         dataset="OISST") %>%  
+  select(-sst_month)
+
+ebs_oisst_df_clim <- ebs_oisst_df %>%
+  group_by(x, y, year, month)  %>%
+  summarise(sst_month = median(sst)) %>% 
+  group_by(x, y, month) %>%
+  mutate(sst_month_clim = mean(sst_month)) %>%
+  ungroup() %>%
+  mutate(sst_month_anom = sst_month-sst_month_clim,
+         date_join = as_date(paste0(year, "-", month, "-16")),
+         dataset="OISST") %>%  
   select(-sst_month)
 
 #####################
@@ -334,77 +377,222 @@ neus_df_clim <- neus_hadisst_df_clim %>%
   ungroup() %>%
   mutate(sst = sst_month_clim + sst_month_anom) 
 
+wc_df_clim <- wc_hadisst_df_clim %>%
+  filter(date_join < min(wc_oisst_df_clim$date_join)) %>% # keep only early dates 
+  bind_rows(wc_oisst_df_clim) %>%
+  group_by(x, y, month) %>%
+  arrange(year) %>%
+  tidyr::fill(sst_month_clim, .direction="up") %>% 
+  ungroup() %>%
+  mutate(sst = sst_month_clim + sst_month_anom) 
+
+ebs_df_clim <- ebs_hadisst_df_clim %>%
+  filter(date_join < min(ebs_oisst_df_clim$date_join)) %>% # keep only early dates 
+  bind_rows(ebs_oisst_df_clim) %>%
+  group_by(x, y, month) %>%
+  arrange(year) %>%
+  tidyr::fill(sst_month_clim, .direction="up") %>% 
+  ungroup() %>%
+  mutate(sst = sst_month_clim + sst_month_anom) 
+
 # save all dfs
-saveRDS(neus_hadisst_df, here("processed-data","neus_hadisst_df.rds"))
-saveRDS(neus_oisst_df, here("processed-data","neus_oisst_df.rds"))
-saveRDS(wc_hadisst_df, here("processed-data","wc_hadisst_df.rds"))
-saveRDS(wc_oisst_df, here("processed-data","wc_oisst_df.rds"))
-saveRDS(ebs_hadisst_df, here("processed-data","ebs_hadisst_df.rds"))
-saveRDS(ebs_oisst_df, here("processed-data","ebs_oisst_df.rds"))
+saveRDS(neus_df_clim, here("processed-data","neus_sst_corrected.rds"))
+saveRDS(wc_df_clim, here("processed-data","wc_sst_corrected.rds"))
+saveRDS(ebs_df_clim, here("processed-data","ebs_sst_corrected.rds"))
 
 #####################
 ### generate supplementary plots
 #####################
 
-# mean climatology of each dataset over time, for 1982 onwards 
-neus.reg.clim.hadisst <- neus_hadisst_df %>%
-  filter(year>=1982) %>%
-  group_by(x, y, month) %>%
-  summarise(sst_month_clim = mean(sst)) %>% # get climatology by month (average conditions across all instances of that month in that cell) 
-  ungroup() %>%
-  group_by(month) %>%
-  summarise(reg_month_clim = mean(sst_month_clim)) %>%
-  mutate(dataset="HadISST")
-
-neus.clim.time.gg <- neus_oisst_df_clim %>%
-  group_by(month) %>%
-  summarise(reg_month_clim = mean(sst_month_clim)) %>%
-  mutate(dataset="OISST") %>%
-  bind_rows(neus.reg.clim.hadisst) %>%
-  ggplot() +
-  geom_line(aes(x=month, y=reg_month_clim, group=dataset, color=dataset)) +
-  theme_bw() + 
-  scale_x_continuous(breaks=seq(1, 12, 1)) +
-  scale_y_continuous(breaks=seq(6, 22, 2)) +
-  labs(x="Month", y="Climatological Mean SST", title="Northeast") +
-  theme(legend.title=element_blank(),
-        legend.position=c(0.2, 0.8))
-neus.clim.time.gg
-
-# monthly anomalies in both datasets 
-neus.anom.time.gg <- neus_df_clim %>%
-  group_by(date_join, month, dataset) %>%
-  summarise(reg_month_anom = mean(sst_month_anom)) %>% # get mean across all cells in the region for that date 
-  ggplot(aes(x=date_join, y=reg_month_anom, color=month, group=month)) +
-  geom_line() +
-  facet_wrap(~dataset)
-neus.anom.time.gg
+if(generate_supplementary_plots==TRUE) {
   
-
-# 
-# neus.clim.time.gg <- neus_hadisst_df %>%
-#   group_by(x, y, month) %>%
-#   mutate(sst_month_clim = mean(sst)) %>% # recreate hadISST climatology 
-#   ungroup() %>%
-#   rename("date_join"=time) %>%
-#   group_by(year, date_join) %>%
-#   dplyr::summarise(month_clim_mean = mean(sst_month_clim)) %>% 
-#   ungroup() %>%
-#   group_by(year) %>%
-#   dplyr::summarise(year_clim_mean = mean(month_clim_mean)) %>% 
-#   ggplot() +
-#   geom_point(aes(x=year, y=year_clim_mean)) + 
-#   geom_line(aes(x=year, y=year_clim_mean)) 
-# 
-# test <- neus_hadisst_df %>%
-#   filter(x %in% c(-67.125, -68.125) & y %in% c(44.625, 44.375) & year %in% c(1970, 1972))
-# 
-# # get monthly climatologies within and then across cells 
-# test1 <- test %>%
-#   group_by(month) %>% 
-#   mutate(cell_monthly_climatology = mean(sst)) %>%
-#   ungroup() %>%
-#   group_by(time) %>%
-#   
-#   
-# neus.clim.time.gg  
+  library(Rcolorbrewer)
+  
+  # monthly climatology of each dataset over time, for 1982 onwards; need this to make a plot of climatologies and anomalies over time (since above, we filter out HadISST years after 1982)
+  neus.reg.clim.hadisst <- neus_hadisst_df %>%
+    filter(year>=1982) %>%
+    group_by(x, y, month) %>%
+    summarise(sst_month_clim = mean(sst)) %>% # get climatology by month (average conditions across all instances of that month in that cell) 
+    ungroup() %>%
+    group_by(month) %>%
+    summarise(reg_month_clim = mean(sst_month_clim)) %>%
+    mutate(dataset="HadISST")
+  
+  wc.reg.clim.hadisst <- wc_hadisst_df %>%
+    filter(year>=1982) %>%
+    group_by(x, y, month) %>%
+    summarise(sst_month_clim = mean(sst)) %>% 
+    ungroup() %>%
+    group_by(month) %>%
+    summarise(reg_month_clim = mean(sst_month_clim)) %>%
+    mutate(dataset="HadISST")
+  
+  ebs.reg.clim.hadisst <- ebs_hadisst_df %>%
+    filter(year>=1982) %>%
+    group_by(x, y, month) %>%
+    summarise(sst_month_clim = mean(sst)) %>% 
+    ungroup() %>%
+    group_by(month) %>%
+    summarise(reg_month_clim = mean(sst_month_clim)) %>%
+    mutate(dataset="HadISST")
+  
+  # plot monthly climatologies over time from both datasets 
+  neus.clim.time.gg <- neus_oisst_df_clim %>%
+    group_by(month) %>%
+    summarise(reg_month_clim = mean(sst_month_clim)) %>%
+    mutate(dataset="OISST") %>%
+    bind_rows(neus.reg.clim.hadisst) %>%
+    ggplot() +
+    geom_line(aes(x=month, y=reg_month_clim, group=dataset, color=dataset), size=0.8) +
+    theme_bw() + 
+    scale_color_manual(values=c("#41C03F","mediumblue")) + 
+    scale_x_continuous(breaks=seq(1, 12, 1)) +
+    scale_y_continuous(breaks=seq(6, 22, 2)) +
+    labs(x="Month", y="Climatological Mean SST (°C)", title="Northeast") +
+    theme(legend.title=element_blank(),
+          legend.position=c(0.2, 0.8))
+  neus.clim.time.gg
+  
+  wc.clim.time.gg <- wc_oisst_df_clim %>%
+    group_by(month) %>%
+    summarise(reg_month_clim = mean(sst_month_clim)) %>%
+    mutate(dataset="OISST") %>%
+    bind_rows(wc.reg.clim.hadisst) %>%
+    ggplot() +
+    geom_line(aes(x=month, y=reg_month_clim, group=dataset, color=dataset), size=0.8) +
+    theme_bw() + 
+    scale_color_manual(values=c("#41C03F","mediumblue")) + 
+    scale_x_continuous(breaks=seq(1, 12, 1)) +
+    scale_y_continuous(breaks=seq(11, 17, 1)) +
+    labs(x="Month", y="Climatological Mean SST (°C)", title="West Coast") +
+    theme(legend.title=element_blank(),
+          legend.position=c(0.2, 0.8))
+  wc.clim.time.gg
+  
+  ebs.clim.time.gg <- ebs_oisst_df_clim %>%
+    group_by(month) %>%
+    summarise(reg_month_clim = mean(sst_month_clim)) %>%
+    mutate(dataset="OISST") %>%
+    bind_rows(ebs.reg.clim.hadisst) %>%
+    ggplot() +
+    geom_line(aes(x=month, y=reg_month_clim, group=dataset, color=dataset), size=0.8) +
+    theme_bw() + 
+    scale_color_manual(values=c("#41C03F","mediumblue")) + 
+    scale_x_continuous(breaks=seq(1, 12, 1)) +
+    scale_y_continuous(breaks=seq(-1, 10, 1)) +
+    labs(x="Month", y="Climatological Mean SST (°C)", title="Eastern Bering Sea") +
+    theme(legend.title=element_blank(),
+          legend.position=c(0.2, 0.8))
+  ebs.clim.time.gg
+  
+  ggsave(neus.clim.time.gg, filename=here("results","sst_climatologies_time_neus.png"), height=5, width=4, dpi=160)
+  ggsave(wc.clim.time.gg, filename=here("results","sst_climatologies_time_wc.png"), height=5, width=4, dpi=160)
+  
+  ggsave(ebs.clim.time.gg, filename=here("results","sst_climatologies_time_ebs.png"), height=5, width=4, dpi=160)
+  
+  # no more plots of EBS--we aren't using HadISST years and the climatologies are really similar anyway
+  
+  # order months by mean temperature for plotting colors
+  neus.month.labels <- neus_oisst_df_clim %>%
+    group_by(month) %>%
+    summarise(overall_clim = mean(sst_month_clim)) %>%
+    arrange(-overall_clim) %>%
+    mutate(month = as.factor(as.character(month)))
+  
+  wc.month.labels <- wc_oisst_df_clim %>%
+    group_by(month) %>%
+    summarise(overall_clim = mean(sst_month_clim)) %>%
+    arrange(-overall_clim) %>%
+    mutate(month = as.factor(as.character(month)))
+  
+  # hacky way to expand the RColorBrewer red-to-blue palette to 12 distinct colors 
+  month.palette <- colorRampPalette(colors = brewer.pal(10, "RdYlBu"))(12)
+  
+  # monthly anomalies in both datasets 
+  neus.anom.time.gg <- neus_hadisst_df_clim %>% 
+    select(-sst_month_clim) %>%
+    bind_rows(neus_oisst_df_clim %>% select(-sst_month_clim)) %>% # get anomalies only from full time-series of both datasets 
+    group_by(date_join, month, dataset) %>%
+    summarise(reg_month_anom = mean(sst_month_anom)) %>% # get mean across all cells in the region for that date & that dataset
+    ungroup() %>%
+    mutate(month = factor(as.character(month), levels=neus.month.labels$month)) %>% # reorder months by mean climatology for visual effect in plot
+    ggplot(aes(x=date_join, y=reg_month_anom, color=month, group=month)) +
+    labs(x="Time", y="SST Anomaly (°C)", title="Northeast", color="Month") +
+    geom_line(size=0.8) +
+    geom_hline(yintercept=0, color="black", linetype="dashed", size=0.8) +
+    facet_wrap(~dataset) +
+    theme_bw() + 
+    scale_color_manual(values=month.palette) + 
+    scale_x_date(breaks = lubridate::ymd(seq(1968, 2018, 10), truncated = 2L), date_labels = "%Y") +
+    scale_y_continuous(breaks=seq(-3, 3, 1)) +
+    theme( 
+      legend.position=c(0.15, 0.88),
+      legend.direction = "horizontal",
+      legend.background = element_rect("transparent"))
+  neus.anom.time.gg
+  ggsave(neus.anom.time.gg, filename=here("results","sst_anomalies_time_neus.png"), height=5, width=10, dpi=160)
+  
+  wc.anom.time.gg <- wc_hadisst_df_clim %>% 
+    select(-sst_month_clim) %>%
+    bind_rows(wc_oisst_df_clim %>% select(-sst_month_clim)) %>%  
+    group_by(date_join, month, dataset) %>%
+    summarise(reg_month_anom = mean(sst_month_anom)) %>%  
+    ungroup() %>%
+    mutate(month = factor(as.character(month), levels=neus.month.labels$month)) %>% 
+    ggplot(aes(x=date_join, y=reg_month_anom, color=month, group=month)) +
+    labs(x="Time", y="SST Anomaly (°C)", title="West Coast", color="Month") +
+    geom_line(size=0.8) +
+    geom_hline(yintercept=0, color="black", linetype="dashed", size=0.8) +
+    facet_wrap(~dataset) +
+    theme_bw() + 
+    scale_color_manual(values=month.palette) + 
+    scale_x_date(breaks = lubridate::ymd(seq(1978, 2018, 10), truncated = 2L), date_labels = "%Y") +
+    scale_y_continuous(breaks=seq(-3, 3, 1)) +
+    theme( 
+      #  legend.position=c(0.15, 0.88),
+      #   legend.direction = "horizontal",
+      #  legend.background = element_rect("transparent")
+      
+      legend.position="none") # get rid of legend which plots over a peak--will be next to NEUS plot anyway
+  wc.anom.time.gg
+  ggsave(wc.anom.time.gg, filename=here("results","sst_anomalies_time_wc.png"), height=5, width=10, dpi=160)
+  
+  
+  # check that these distributions are not statistically different 
+  ks.test(neus_hadisst_df_clim$sst_month_anom,neus_oisst_df_clim$sst_month_anom, alternative="two.sided")
+  ks.test(wc_hadisst_df_clim$sst_month_anom,wc_oisst_df_clim$sst_month_anom, alternative="two.sided")
+  
+  # density plots of all cell-specific anomalies in each dataset
+  neus.anom.pdf.gg <- neus_hadisst_df_clim %>% 
+    select(-sst_month_clim) %>%
+    bind_rows(neus_oisst_df_clim %>% select(-sst_month_clim)) %>% # get anomalies only from full time-series of both datasets 
+    ggplot() +
+    geom_density(aes(x=sst_month_anom, group=dataset, fill=dataset), color="black", alpha=0.4) +
+    scale_fill_manual(values=c("#0D592C","mediumblue")) + 
+    labs(x="SST Anomaly (°C)", y="Density", title="Northeast", fill="Dataset") +
+    theme_bw() + 
+    coord_cartesian(xlim=c(-5, 5), ylim=c(0, 0.5)) +
+    theme( 
+      legend.position=c(0.2, 0.88),
+      legend.direction = "vertical",
+      legend.background = element_rect("transparent"))
+  neus.anom.pdf.gg
+  ggsave(neus.anom.pdf.gg, filename=here("results","sst_anomalies_density_neus.png"), height=5, width=5, dpi=160)
+  
+  wc.anom.pdf.gg <- wc_hadisst_df_clim %>% 
+    select(-sst_month_clim) %>%
+    bind_rows(wc_oisst_df_clim %>% select(-sst_month_clim)) %>% # get anomalies only from full time-series of both datasets 
+    ggplot() +
+    geom_density(aes(x=sst_month_anom, group=dataset, fill=dataset), color="black", alpha=0.4) +
+    scale_fill_manual(values=c("#0D592C","mediumblue")) + 
+    labs(x="SST Anomaly (°C)", y="Density", title="West Coast", fill="Dataset") +
+    theme_bw() + 
+    coord_cartesian(xlim=c(-5, 5), ylim=c(0, 0.5)) +
+    theme( 
+      legend.position=c(0.2, 0.88),
+      legend.direction = "vertical",
+      legend.background = element_rect("transparent"))
+  wc.anom.pdf.gg
+  ggsave(wc.anom.pdf.gg, filename=here("results","sst_anomalies_density_wc.png"), height=5, width=5, dpi=160)
+  
+}
