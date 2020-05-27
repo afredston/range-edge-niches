@@ -48,56 +48,42 @@ dat.models.groups <- dat.models %>%
 
 # prep explanatory variables for models using region-wide change in T 
 
-ebs.sst.summary <- read_rds(here("processed-data","ebs_sst_rotated.rds")) %>% 
-  group_by(year_match, month, lat, lon) %>%
-  mutate(sst.month.mean = mean(sst)) %>% # calculate monthly means
-  ungroup() %>%
-  group_by(year_match, lat, lon) %>%
-  mutate(cell.annual.sst = mean(sst.month.mean)) %>% # calculate annual mean of monthly SSTs for each grid cell
-  ungroup() %>%
-  group_by(year_match) %>%
-  mutate(mean.annual.sst = mean(cell.annual.sst)) %>% # calculate annual mean of all grid cells
-  select(year_match, mean.annual.sst) %>%
-  distinct() %>%
-  mutate(region="ebs")
-
-# ebs.sst.scalemean = mean(ebs.sst.summary$mean.annual.sst)
-# ebs.sst.scalesd = sd(ebs.sst.summary$mean.annual.sst)
-# ebs.sst.summary$mean.annual.sst.scale <- (ebs.sst.summary$mean.annual.sst-ebs.sst.scalemean)/ebs.sst.scalesd
-
-wc.sst.summary <- read_rds(here("processed-data","wc_sst_coastdist.rds")) %>% 
-  rename(lon="x",lat="y") %>%
-  group_by(year_match, month, lat, lon) %>%
-  mutate(sst.month.mean = mean(sst)) %>% # calculate monthly means
-  ungroup() %>%
-  group_by(year_match, lat, lon) %>%
-  mutate(cell.annual.sst = mean(sst.month.mean)) %>% # calculate annual mean of monthly SSTs for each grid cell
-  ungroup() %>%
-  group_by(year_match) %>%
-  mutate(mean.annual.sst = mean(cell.annual.sst)) %>% # calculate annual mean of all grid cells
-  select(year_match, mean.annual.sst) %>%
-  distinct() %>%
-  mutate(region="wc")
-
-# wc.sst.scalemean = mean(wc.sst.summary$mean.annual.sst)
-# wc.sst.scalesd = sd(wc.sst.summary$mean.annual.sst)
-# wc.sst.summary$mean.annual.sst.scale <- (wc.sst.summary$mean.annual.sst-wc.sst.scalemean)/wc.sst.scalesd
-
-neus.sst.summary <- read_rds(here("processed-data","neus_sst_coastdist.rds")) %>% 
-  rename(lon="x",lat="y") %>%
-  group_by(year_match, lat, lon) %>%
-  mutate(cell.annual.sst = mean(sst)) %>% # calculate annual mean of monthly SSTs for each grid cell
-  ungroup() %>%
-  group_by(year_match) %>%
-  mutate(mean.annual.sst = mean(cell.annual.sst)) %>% # calculate annual mean of all grid cells
-  select(year_match, mean.annual.sst) %>%
-  distinct() %>%
-  mutate(region="neus")
-
-dat.sst.summary <- rbind(neus.sst.summary, wc.sst.summary, ebs.sst.summary)
-
-dat.edges.sst.summary <- dat.models %>%
-  left_join(dat.sst.summary, by=c("region","year"="year_match"))
+# neus.sst.summary <- read_rds(here("processed-data","neus_sst_coastdist.rds")) %>% 
+#   rename(lon="x",lat="y") %>%
+#   group_by(year_match, lat, lon) %>%
+#   mutate(cell.annual.sst = mean(sst)) %>% # calculate annual mean of monthly SSTs for each grid cell
+#   ungroup() %>%
+#   group_by(year_match) %>%
+#   mutate(mean.annual.sst = mean(cell.annual.sst)) %>% # calculate annual mean of all grid cells
+#   select(year_match, mean.annual.sst) %>%
+#   distinct() %>%
+#   mutate(region="neus")
+# 
+# wc.sst.summary <- read_rds(here("processed-data","wc_sst_coastdist.rds")) %>% 
+#   rename(lon="x",lat="y") %>%
+#   group_by(year_match, lat, lon) %>%
+#   mutate(cell.annual.sst = mean(sst)) %>% # calculate annual mean of monthly SSTs for each grid cell
+#   ungroup() %>%
+#   group_by(year_match) %>%
+#   mutate(mean.annual.sst = mean(cell.annual.sst)) %>% # calculate annual mean of all grid cells
+#   select(year_match, mean.annual.sst) %>%
+#   distinct() %>%
+#   mutate(region="wc")
+# 
+# ebs.sst.summary <- read_rds(here("processed-data","ebs_sst_rotated.rds")) %>% 
+#   group_by(year_match, lat, lon) %>%
+#   mutate(cell.annual.sst = mean(sst)) %>% # calculate annual mean of monthly SSTs for each grid cell
+#   ungroup() %>%
+#   group_by(year_match) %>%
+#   mutate(mean.annual.sst = mean(cell.annual.sst)) %>% # calculate annual mean of all grid cells
+#   select(year_match, mean.annual.sst) %>%
+#   distinct() %>%
+#   mutate(region="ebs")
+# 
+# dat.sst.summary <- rbind(neus.sst.summary, wc.sst.summary, ebs.sst.summary)
+# 
+# dat.edges.sst.summary <- dat.models %>%
+#   left_join(dat.sst.summary, by=c("region","year"="year_match"))
 
 #######################
 ### single-species Bayesian models of edge position ~ regional T or time 
@@ -115,66 +101,66 @@ dat.edges.sst.summary <- dat.models %>%
 #   filter(!term=="(Intercept)")
 
 # species shifts vs temp 
-spp.bayes.sst.lm.df <- NULL
-for(i in unique(dat.edges.sst.summary$species)) {
-  dfprep1 <- dat.edges.sst.summary[dat.edges.sst.summary$species==i,] # subdivide by species 
-  for(j in unique(dfprep1$region)) {
-    dfprep2 <- dat.edges.sst.summary[dat.edges.sst.summary$species==i & dat.edges.sst.summary$region==j,] # subdivide by region, for the few spp found in multiple regions 
-    for(k in unique(dfprep2$quantile)) {
-      df <- dat.edges.sst.summary[dat.edges.sst.summary$species==i & dat.edges.sst.summary$region==j & dat.edges.sst.summary$quantile==k,] # subdivide by quantile, for the few spp with both range edges
-      spp.bayes.lm <- try(stan_glm(Estimate ~ mean.annual.sst, 
-                                   data=df, 
-                                   family=gaussian(), 
-                                   iter = 12000,
-                                   warmup = 2000,
-                                   adapt_delta = 0.95,
-                                   chains = 4,
-                                   cores = 1,
-                                   prior = normal(0, 1000),# Burrows paper reports temperature spatial gradients up to 0.02 degrees C / km. taking the inverse, this could range from 50km shift for degree C up to 1000 km or higher. centering on 0 because relationship is not necessarily positive for all species. 
-                                   weights = 1/(Std.Error)^2)) 
-      if(!class(spp.bayes.lm)[1] == "try-error") { # adding try() here because some edges are so invariant that the model fails 
-        spp.bayes.lm.tidy <- tidy_draws(spp.bayes.lm) %>%
-          mutate(species = paste0(i),
-                 region = paste0(j),
-                 quantile = paste0(k))
-        spp.bayes.sst.lm.df <- rbind(spp.bayes.sst.lm.df, spp.bayes.lm.tidy)
-      }
-    }
-  }
-}
+# spp.bayes.sst.lm.df <- NULL
+# for(i in unique(dat.edges.sst.summary$species)) {
+#   dfprep1 <- dat.edges.sst.summary[dat.edges.sst.summary$species==i,] # subdivide by species 
+#   for(j in unique(dfprep1$region)) {
+#     dfprep2 <- dat.edges.sst.summary[dat.edges.sst.summary$species==i & dat.edges.sst.summary$region==j,] # subdivide by region, for the few spp found in multiple regions 
+#     for(k in unique(dfprep2$quantile)) {
+#       df <- dat.edges.sst.summary[dat.edges.sst.summary$species==i & dat.edges.sst.summary$region==j & dat.edges.sst.summary$quantile==k,] # subdivide by quantile, for the few spp with both range edges
+#       spp.bayes.lm <- try(stan_glm(Estimate ~ mean.annual.sst, 
+#                                    data=df, 
+#                                    family=gaussian(), 
+#                                    iter = 12000,
+#                                    warmup = 2000,
+#                                    adapt_delta = 0.95,
+#                                    chains = 4,
+#                                    cores = 1,
+#                                    prior = normal(0, 1000),# Burrows paper reports temperature spatial gradients up to 0.02 degrees C / km. taking the inverse, this could range from 50km shift for degree C up to 1000 km or higher. centering on 0 because relationship is not necessarily positive for all species. 
+#                                    weights = 1/(Std.Error^2))) 
+#       if(!class(spp.bayes.lm)[1] == "try-error") { # adding try() here because some edges are so invariant that the model fails 
+#         spp.bayes.lm.tidy <- tidy_draws(spp.bayes.lm) %>%
+#           mutate(species = paste0(i),
+#                  region = paste0(j),
+#                  quantile = paste0(k))
+#         spp.bayes.sst.lm.df <- rbind(spp.bayes.sst.lm.df, spp.bayes.lm.tidy)
+#       }
+#     }
+#   }
+# }
 
-bayes.lm.sst.edgetype.gg <- spp.bayes.sst.lm.df  %>%
-  group_by(.draw, quantile, region) %>%
-  mutate(mean.param = mean(mean.annual.sst) ) %>%
-  ungroup() %>% 
-  select(.draw, mean.param, quantile, region) %>%
-  distinct() %>%
-  ggplot() +
-  theme_bw() +
-  geom_density(aes(x=mean.param, fill=quantile), color="black", alpha=0.5) +
-  scale_fill_brewer(type="seq", palette="YlGnBu") +
-  labs(x="Coefficient of Edge vs Temperature (km/C)", y="Density", fill="Range Limit Type") +
-  theme(legend.position=c(0.2, 0.8)) +
-  facet_wrap(~region) +
-  NULL
-bayes.lm.sst.edgetype.gg
-ggsave(bayes.lm.sst.edgetype.gg, filename=here("results","edge_coefficients_by_reg.png"), dpi=160, width=8, height=5)
-
-bayes.lm.sst.gg <- spp.bayes.sst.lm.df  %>%
-  group_by(.draw, quantile) %>%
-  mutate(mean.param = mean(mean.annual.sst) ) %>%
-  ungroup() %>% 
-  select(.draw, mean.param, quantile) %>%
-  distinct() %>%
-  ggplot() +
-  theme_bw() +
-  geom_density(aes(x=mean.param, fill=quantile), color="black", alpha=0.5) +
-  scale_fill_brewer(type="seq", palette="YlGnBu") +
-  labs(x="Coefficient of Edge vs Temperature (km/C)", y="Density", fill="Range Limit Type") +
-  theme(legend.position=c(0.2, 0.8)) +
-  NULL
-bayes.lm.sst.gg
-ggsave(bayes.lm.sst.gg, filename=here("results","edge_coefficients.png"), dpi=160, width=5, height=5)
+# bayes.lm.sst.edgetype.gg <- spp.bayes.sst.lm.df  %>%
+#   group_by(.draw, quantile, region) %>%
+#   mutate(mean.param = mean(mean.annual.sst) ) %>%
+#   ungroup() %>% 
+#   select(.draw, mean.param, quantile, region) %>%
+#   distinct() %>%
+#   ggplot() +
+#   theme_bw() +
+#   geom_density(aes(x=mean.param, fill=quantile), color="black", alpha=0.5) +
+#   scale_fill_brewer(type="seq", palette="YlGnBu") +
+#   labs(x="Coefficient of Edge vs Temperature (km/C)", y="Density", fill="Range Limit Type") +
+#   theme(legend.position=c(0.2, 0.8)) +
+#   facet_wrap(~region) +
+#   NULL
+# bayes.lm.sst.edgetype.gg
+# ggsave(bayes.lm.sst.edgetype.gg, filename=here("results","edge_coefficients_by_reg.png"), dpi=160, width=8, height=5)
+# 
+# bayes.lm.sst.gg <- spp.bayes.sst.lm.df  %>%
+#   group_by(.draw, quantile) %>%
+#   mutate(mean.param = mean(mean.annual.sst) ) %>%
+#   ungroup() %>% 
+#   select(.draw, mean.param, quantile) %>%
+#   distinct() %>%
+#   ggplot() +
+#   theme_bw() +
+#   geom_density(aes(x=mean.param, fill=quantile), color="black", alpha=0.5) +
+#   scale_fill_brewer(type="seq", palette="YlGnBu") +
+#   labs(x="Coefficient of Edge vs Temperature (km/C)", y="Density", fill="Range Limit Type") +
+#   theme(legend.position=c(0.2, 0.8)) +
+#   NULL
+# bayes.lm.sst.gg
+# ggsave(bayes.lm.sst.gg, filename=here("results","edge_coefficients.png"), dpi=160, width=5, height=5)
 
 # species shifts vs time
 
@@ -193,9 +179,9 @@ for(i in unique(dat.models$species)) {
                                    adapt_delta = 0.95,
                                    chains = 4,
                                    cores = 1,
-                                   prior = normal(0, 100),
-                                   weights = 1/(Std.Error)^2
-                                   )) # centered on 0 to allow negative coefficients for some species. SD of 100 makes it pretty flat but still bounds to a reasonable order of magnitude in km/yr
+                                   prior = normal(0, 50),
+                                   weights = 1/(Std.Error^2)
+                                   )) # centered on 0 to allow negative coefficients for some species. SD of 50 intended to exceed upper range of marine climate velocities (around 200 km/dec) in Burrows et al 2011
       if(!class(spp.bayes.lm)[1] == "try-error") { # adding try() here because some edges are so invariant that the model fails 
         spp.bayes.lm.tidy <- tidy_draws(spp.bayes.lm) %>%
           mutate(species = paste0(i),
@@ -283,39 +269,31 @@ ebs.sst <- readRDS(here("processed-data","ebs_sst_rotated.rds"))
 wc.sst <- readRDS(here("processed-data","wc_sst_coastdist.rds"))
 neus.sst <- readRDS(here("processed-data","neus_sst_coastdist.rds"))
 
-# note that datasets have both monthly readings (pre-1982, from hadisst) and daily (post-1982, from oisst) that are first converted into monthly means for comparability among regions/years
 ebs.sst.prepgam <- ebs.sst %>% 
-  group_by(N_km, E_km, year_match, month) %>%
-  mutate(cell.month.mean=mean(sst)) %>%
-  ungroup() %>%
   group_by(NW_km, year_match) %>%
-  mutate(sstmean = mean(cell.month.mean),
-         sstmax = max(cell.month.mean),
-         sstmin = min(cell.month.mean)) %>%
+  mutate(sstmean = mean(sst),
+         sstmax = max(sst),
+         sstmin = min(sst)) %>%
   ungroup() %>%
   dplyr::select(year_match, NW_km, sstmean, sstmax, sstmin) %>%
   distinct() %>%
   mutate(year_match = as.factor(year_match)) 
 
 wc.sst.prepgam <- wc.sst %>% 
-  group_by(x, y, year_match, month) %>%
-  mutate(cell.month.mean = mean(sst)) %>%
   group_by(coast_km, year_match) %>%
-  mutate(sstmean = mean(cell.month.mean),
-         sstmax = max(cell.month.mean),
-         sstmin = min(cell.month.mean)) %>%
+  mutate(sstmean = mean(sst),
+         sstmax = max(sst),
+         sstmin = min(sst)) %>%
   ungroup() %>%
   dplyr::select(year_match, coast_km, sstmean,sstmax, sstmin) %>%
   distinct() %>%
   mutate(year_match = as.factor(year_match)) 
 
 neus.sst.prepgam <- neus.sst %>% 
-  group_by(x, y, month, year_match) %>%
-  mutate(cell.month.mean = mean(sst)) %>%
   group_by(coast_km, year_match) %>%
-  mutate(sstmean = mean(cell.month.mean),
-         sstmax = max(cell.month.mean),
-         sstmin = min(cell.month.mean)) %>%
+  mutate(sstmean = mean(sst),
+         sstmax = max(sst),
+         sstmin = min(sst)) %>%
   ungroup() %>%
   dplyr::select(year_match, coast_km, sstmean,sstmax, sstmin) %>%
   distinct() %>%
@@ -385,17 +363,16 @@ wc.pred$axis <- "coast_km"
 ebs.pred <- rename(ebs.pred, edge_position=NW_km)
 ebs.pred$axis <- "NW_km"
 
+# tidy columns and combine
 dat.predict1 <- rbind(neus.pred, wc.pred, ebs.pred)%>%
   select(-predict.sstmean.se, -predict.sstmax.se, -predict.sstmin.se) %>%
   pivot_longer(cols=c(predict.sstmean, predict.sstmax, predict.sstmin), names_to="predicted.var",values_to="sst") 
-
 
 dat.predict <- rbind(neus.pred, wc.pred, ebs.pred)%>%
   select(-predict.sstmean, -predict.sstmax, -predict.sstmin) %>%
   pivot_longer(cols=c(predict.sstmean.se, predict.sstmax.se, predict.sstmin.se), names_to="predicted.var",values_to="sstSE") %>%
   mutate(predicted.var=str_replace(predicted.var, ".se","")) %>%
   inner_join(dat.predict1)
-
 
 dat.predict.niche <- dat.predict %>%
   filter(!predicted.var=="predict.sstmean")
@@ -425,8 +402,10 @@ for(i in unique(dat.predict.niche$species)) {
                                      adapt_delta = 0.99,
                                      chains = 4,
                                      cores = 1,
-                                     prior = normal(0, 2), # relatively flat but constrained, SST vs year is often order 0.1
-                                     control = list(max_treedepth = 20)))
+                                     prior = normal(0, 0.1), # exceeds highest rates of warming we found in the paper which were around 0.04 C/yr
+                                     control = list(max_treedepth = 20),
+                                     weights = 1/(sstSE^2)
+                                     ))
         if(!class(spp.bayes.lm)[1] == "try-error") { # adding try() here because some edges are so invariant that the model fails 
           spp.bayes.lm.tidy <- tidy_draws(spp.bayes.lm) %>%
             mutate(species = paste0(i),
@@ -449,7 +428,7 @@ quantile(spp.bayes.niche.lm.df$sigma.rhat) # this previously caused estimation p
 spp.bayes.niche.filter <- spp.bayes.niche.lm.df %>% 
   group_by(region, species, quantile) %>%
   mutate(max.rhat = max(intercept.rhat, year_match.rhat, sigma.rhat)) %>%
-  filter(max.rhat <= 1.1) # get rid of spp*region*edge combos where one of the SST extreme models didn't converge
+  filter(max.rhat <= 1.1) # get rid of spp*region*edge combos where one of the SST extreme models didn't converge--just a check--may not get rid of any 
 
 setdiff(spp.bayes.niche.lm.df %>% select(region, species, quantile) %>% distinct(), spp.bayes.niche.filter %>% select(region, species, quantile) %>% distinct()) # 0 at present 
 
@@ -491,11 +470,14 @@ spp.bayes.niche.groups <- spp.bayes.niche.lm.stats %>%
 write_csv(spp.bayes.niche.groups, here("results","species_by_thermal_niche_group.csv"))
 
 # calculate stats
-spp.bayes.niche.groups %>% left_join(dat.models.groups) %>% group_by(niche.group, taxongroup) %>% summarise(n=n())
-spp.bayes.niche.groups %>% left_join(dat.models.groups) %>% group_by(region, taxongroup) %>% summarise(n=n())
-spp.bayes.niche.groups %>% group_by(niche.group, region) %>% summarise(n=n())
-spp.bayes.niche.groups %>% group_by(niche.group, quantile) %>% summarise(n=n())
-spp.bayes.niche.groups %>% group_by(region, quantile) %>% summarise(n=n())
+spp.bayes.niche.groups %>% left_join(dat.models.groups) %>% group_by(niche.group) %>% summarise(n=n()) # break down by niche grouping
+spp.bayes.niche.groups %>% left_join(dat.models.groups) %>% group_by(niche.group, taxongroup) %>% summarise(n=n()) # break down by fish/invert and niche grouping
+spp.bayes.niche.groups %>% left_join(dat.models.groups) %>% group_by(region, taxongroup) %>% summarise(n=n()) # by region and fish/invert
+spp.bayes.niche.groups %>% group_by(niche.group, region) %>% summarise(n=n()) # by region and niche grouping
+spp.bayes.niche.groups %>% group_by(niche.group, quantile) %>% summarise(n=n()) # by edge type and niche grouping
+spp.bayes.niche.groups %>% group_by(region, quantile) %>% summarise(n=n()) # by region and edge type
+spp.bayes.niche.groups %>% group_by(region, quantile) %>% summarise(n=n()) # by region, niche grouping, and edge type
+
 
 # of the temperature-independent species, which had a significant edge shift over time? 
 spp.tih <- spp.bayes.niche.groups %>%

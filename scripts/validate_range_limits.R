@@ -4,7 +4,7 @@ library(tidyverse)
 library(magrittr)
 library(here)
 
-buffer_amount <- 0.05 # what fraction of the total axis length is "too close" to the region edge on either side? if 0.05, range edges need to be in the middle 90% of the region 
+buffer_amount <- 0.10 # what fraction of the total axis length is "too close" to the region edge on either side? if 0.05, range edges need to be in the middle 90% of the region 
 SEoptions <- c("relative","absolute")
 SEtype <- SEoptions[1]
 
