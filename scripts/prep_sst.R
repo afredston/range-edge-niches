@@ -15,7 +15,7 @@ here <- here::here
 
 source(here("functions","sfc_as_cols.R"))
 
-generate_supplementary_plots = TRUE # toggle this off if you don't want the script to print out a bunch of extra plots exploring anomalies and climatologies of both SST datasets
+generate_supplementary_plots = FALSE # toggle this off if you don't want the script to print out a bunch of extra plots exploring anomalies and climatologies of both SST datasets
 
 #####################
 ### get ERDDAP data
@@ -38,7 +38,8 @@ hadisst_fields <- "sst"
 
 neus_hadisst_time <- c("1967-01-16", "2018-12-16")
 wc_hadisst_time <- c("1976-01-16","2018-12-16")
-ebs_hadisst_time <- c("1981-01-16","2018-12-16")
+ebs_hadisst_time <- c("1981-01-16","2018-12-16") # leaving this in for completeness but we actually don't need HadISST for this region since the data starts in 1989
+min_ebs_year_needed <- 1988
 
 oisst <- "ncdcOisst2Agg_LonPM180"
 # split up into decades for easier downloading
@@ -134,25 +135,13 @@ ebs.depth.cutoff <- 300
 neus.depth.cutoff <- 300
 wc.depth.cutoff <- 600 # WC shelf is very steep so I increased this from 300m in 100m increments until the bathymetric mask did not have big gaps along the coast 
 
-# get masks for each region; same bounding boxes as SST data above. using 4-minute resolution (default)
-wc.bathy <- get.bathy(lon = wc_lonrange, lat = wc_latrange, visualize = F, res = 4) 
-neus.bathy <- get.bathy(lon = neus_lonrange, lat = neus_latrange, visualize = F, res = 4) 
-ebs.bathy <- get.bathy(lon = ebs_lonrange, lat = ebs_latrange, visualize = F, res = 4) 
-
-# get CRS for future reference
-bathy.crs <- wc.bathy %>% # works for all regions 
-  as("SpatialPolygonsDataFrame") %>% 
-  st_as_sf() %>% 
-  st_crs() 
-
-# get shapefile of the US EEZ, reproject to match bathymetry 
-eezs <- st_read(here("raw-data/World_EEZ_v10_20180221","eez_v10.shp")) # download from http://www.marineregions.org/downloads.php and move to raw-data folder
-useez <- eezs %>% 
-  dplyr::filter(Sovereign1 == "United States") %>% 
-  st_transform(crs=bathy.crs) 
 
 # get bathymetric masks; slow 
 if(!file.exists(wc.bathy.file)) {
+  
+  # get masks for each region; same bounding boxes as SST data above. using 4-minute resolution (default)
+  wc.bathy <- get.bathy(lon = wc_lonrange, lat = wc_latrange, visualize = F, res = 4) 
+  
   wc.bathy.mask <- wc.bathy %>% 
     as("SpatialPolygonsDataFrame") %>% 
     st_as_sf() %>% # retains CRS 
@@ -166,6 +155,9 @@ if(!file.exists(wc.bathy.file)) {
   }
 
 if(!file.exists(ebs.bathy.file)) {
+  
+  ebs.bathy <- get.bathy(lon = ebs_lonrange, lat = ebs_latrange, visualize = F, res = 4)
+  
   ebs.bathy.mask <- ebs.bathy %>% 
     as("SpatialPolygonsDataFrame") %>% 
     st_as_sf() %>%
@@ -178,6 +170,9 @@ if(!file.exists(ebs.bathy.file)) {
   }
 
 if(!file.exists(neus.bathy.file)) {
+  
+  neus.bathy <- get.bathy(lon = neus_lonrange, lat = neus_latrange, visualize = F, res = 4) 
+  
   neus.bathy.mask <- neus.bathy %>% 
     as("SpatialPolygonsDataFrame") %>% 
     st_as_sf() %>%
@@ -188,26 +183,36 @@ if(!file.exists(neus.bathy.file)) {
     neus.bathy.mask <- st_read(neus.bathy.file)
   }
 
+# get CRS for future reference
+bathy.crs <- st_crs(wc.bathy.mask)
+
+# get shapefile of the US EEZ, reproject to match bathymetry 
+eezs <- st_read(here("raw-data/World_EEZ_v10_20180221","eez_v10.shp")) # download from http://www.marineregions.org/downloads.php and move to raw-data folder
+useez <- eezs %>% 
+  dplyr::filter(Sovereign1 == "United States") %>% 
+  st_transform(crs=bathy.crs) 
+
+
 #####################
 ### crop SST datasets to extent of masks 
 #####################
 
 # note that because HadISST is not downloaded with date in a date format (it's a character string), it ends up as the layer title rather than the @z dimension; let's fix that here 
 
-neus_hadisst_times <- names(neus_hadisst_resample) %>%
-  str_remove("X") %>%
-  as.integer() %>%
-  as_datetime()
-
-wc_hadisst_times <- names(wc_hadisst_resample) %>%
-  str_remove("X") %>%
-  as.integer() %>%
-  as_datetime()
-
-ebs_hadisst_times <- names(ebs_hadisst_resample) %>%
-  str_remove("X") %>%
-  as.integer() %>%
-  as_datetime()
+# neus_hadisst_times <- names(neus_hadisst_resample) %>%
+#   str_remove("X") %>%
+#   as.integer() %>%
+#   as_datetime()
+# 
+# wc_hadisst_times <- names(wc_hadisst_resample) %>%
+#   str_remove("X") %>%
+#   as.integer() %>%
+#   as_datetime()
+# 
+# ebs_hadisst_times <- names(ebs_hadisst_resample) %>%
+#   str_remove("X") %>%
+#   as.integer() %>%
+#   as_datetime()
 
 neus_hadisst_crop <- mask(neus_hadisst_resample, as_Spatial(neus.bathy.mask)) 
 neus_oisst_crop1 <- mask(neus_oisst_brick1, as_Spatial(neus.bathy.mask))
@@ -215,15 +220,17 @@ neus_oisst_crop2 <- mask(neus_oisst_brick2, as_Spatial(neus.bathy.mask))
 neus_oisst_crop3 <- mask(neus_oisst_brick3, as_Spatial(neus.bathy.mask))
 neus_oisst_crop4 <- mask(neus_oisst_brick4, as_Spatial(neus.bathy.mask))
 
-wc_hadisst_crop <- mask(wc_hadisst_resample, as_Spatial(wc.bathy.mask))%>%
-  setZ(z=wc_hadisst_times, name="time")
+wc_hadisst_crop <- mask(wc_hadisst_resample, as_Spatial(wc.bathy.mask))
+# %>%
+#   setZ(z=wc_hadisst_times, name="time")
 wc_oisst_crop1 <- mask(wc_oisst_brick1, as_Spatial(wc.bathy.mask))
 wc_oisst_crop2 <- mask(wc_oisst_brick2, as_Spatial(wc.bathy.mask))
 wc_oisst_crop3 <- mask(wc_oisst_brick3, as_Spatial(wc.bathy.mask))
 wc_oisst_crop4 <- mask(wc_oisst_brick4, as_Spatial(wc.bathy.mask))
 
-ebs_hadisst_crop <- mask(ebs_hadisst_resample, as_Spatial(ebs.bathy.mask))%>%
-  setZ(z=ebs_hadisst_times, name="time")
+ebs_hadisst_crop <- mask(ebs_hadisst_resample, as_Spatial(ebs.bathy.mask))
+# %>%
+#   setZ(z=ebs_hadisst_times, name="time")
 ebs_oisst_crop1 <- mask(ebs_oisst_brick1, as_Spatial(ebs.bathy.mask))
 ebs_oisst_crop2 <- mask(ebs_oisst_brick2, as_Spatial(ebs.bathy.mask))
 ebs_oisst_crop3 <- mask(ebs_oisst_brick3, as_Spatial(ebs.bathy.mask))
@@ -254,7 +261,8 @@ wc_hadisst_df <- tabularaster::as_tibble(wc_hadisst_crop, cell=FALSE, dim=TRUE, 
          year = year(time),
          month=month(time))
 ebs_hadisst_df <- tabularaster::as_tibble(ebs_hadisst_crop, cell=FALSE, dim=TRUE, values=TRUE, xy=TRUE) %>% 
-  filter(!is.na(cellvalue))%>%
+  filter(!is.na(cellvalue),
+         cellvalue > -999)%>% # filter out weird cells with a value of -1000
   rename("sst" = cellvalue,
          "time" = dimindex) %>%
   mutate(time = as_date(time),
@@ -296,12 +304,89 @@ wc_oisst_df <- bind_rows(wc_oisst_df1, wc_oisst_df2, wc_oisst_df3, wc_oisst_df4)
 ebs_oisst_df <- bind_rows(ebs_oisst_df1, ebs_oisst_df2, ebs_oisst_df3, ebs_oisst_df4)
 
 #####################
+### confirm grids are identical
+#####################
+
+# check that both datasets for a region contain the exact same cells 
+# as shown in the plots here, there are minor differences between the two grids in grid cells adjacent to land. I'm just dropping these points for now, before calcluating any climatology
+# don't need to worry about this for EBS because we aren't actually using hadISST
+
+neus_hadisst_coords <- neus_hadisst_df %>%
+  select(x, y) %>%
+  distinct() %>%
+  mutate(coords = paste0(x, ",", y))
+
+neus_oisst_coords <- neus_oisst_df %>%
+  select(x, y) %>%
+  distinct() %>%
+  mutate(coords = paste0(x, ",", y))
+
+setdiff(neus_hadisst_coords$coords, neus_oisst_coords$coords)# check for differences
+setdiff(neus_oisst_coords$coords, neus_hadisst_coords$coords)
+
+# plot neus differences
+usoutline <- rnaturalearth::ne_states("united states of america", returnclass = "sf") %>% 
+  st_sf()
+
+ggplot() + 
+  geom_sf(data=usoutline, color="#999999") +
+  geom_point(data=neus_hadisst_coords %>% filter(coords %in% setdiff(neus_hadisst_coords$coords, neus_oisst_coords$coords)), aes(x=x, y=y), color="pink") +
+  geom_point(data=neus_oisst_coords %>% filter(coords %in% setdiff(neus_oisst_coords$coords, neus_hadisst_coords$coords)), aes(x=x, y=y), color="purple") +
+  scale_x_continuous(limits=neus_lonrange) +
+  scale_y_continuous(limits=neus_latrange)
+
+wc_hadisst_coords <- wc_hadisst_df %>%
+  select(x, y) %>%
+  distinct() %>%
+  mutate(coords = paste0(x, ",", y))
+
+wc_oisst_coords <- wc_oisst_df %>%
+  select(x, y) %>%
+  distinct() %>%
+  mutate(coords = paste0(x, ",", y))
+
+setdiff(wc_hadisst_coords$coords, wc_oisst_coords$coords)
+setdiff(wc_oisst_coords$coords, wc_hadisst_coords$coords)
+
+ggplot() + 
+  geom_sf(data=usoutline, color="#999999") +
+  geom_point(data=wc_hadisst_coords %>% filter(coords %in% setdiff(wc_hadisst_coords$coords, wc_oisst_coords$coords)), aes(x=x, y=y), color="pink") +
+  geom_point(data=wc_oisst_coords %>% filter(coords %in% setdiff(wc_oisst_coords$coords, wc_hadisst_coords$coords)), aes(x=x, y=y), color="purple") +
+  scale_x_continuous(limits=wc_lonrange) +
+  scale_y_continuous(limits=wc_latrange)
+
+# ebs_hadisst_coords <- ebs_hadisst_df %>%
+#   select(x, y) %>%
+#   distinct() %>%
+#   mutate(coords = paste0(x, ",", y))
+# 
+# ebs_oisst_coords <- ebs_oisst_df %>%
+#   select(x, y) %>%
+#   distinct() %>%
+#   mutate(coords = paste0(x, ",", y))
+# 
+# setdiff(ebs_hadisst_coords$coords, ebs_oisst_coords$coords)
+# setdiff(ebs_oisst_coords$coords, ebs_hadisst_coords$coords)
+# 
+# ggplot() + 
+#   geom_sf(data=usoutline, color="#999999") +
+#   geom_point(data=ebs_hadisst_coords %>% filter(coords %in% setdiff(ebs_hadisst_coords$coords, ebs_oisst_coords$coords)
+# ), aes(x=x, y=y), color="pink") +
+#   geom_point(data=ebs_oisst_coords %>% filter(coords %in% setdiff(ebs_oisst_coords$coords, ebs_hadisst_coords$coords)
+# ), aes(x=x, y=y), color="purple") +
+#   scale_x_continuous(limits=ebs_lonrange) +
+#   scale_y_continuous(limits=ebs_latrange)
+  
+#####################
 ### calculate climatologies 
 #####################
 
 # in order to join these datasets, we need to do a mean bias correction, and also aggregate OISST up to monthly resolution (from daily) 
 
 neus_hadisst_df_clim <- neus_hadisst_df %>%
+  mutate(coords = paste0(x, ",", y)) %>%
+  filter(!coords %in% setdiff(neus_hadisst_coords$coords, neus_oisst_coords$coords)) %>% # get rid of grid cells that are missing from OISST
+  select(-coords) %>% 
   group_by(x, y, month) %>%
   mutate(sst_month_clim = mean(sst)) %>% # get climatology by month (average conditions across all instances of that month in that cell) 
   ungroup() %>%
@@ -312,6 +397,9 @@ neus_hadisst_df_clim <- neus_hadisst_df %>%
   select(-sst)
 
 wc_hadisst_df_clim <- wc_hadisst_df %>%
+  mutate(coords = paste0(x, ",", y)) %>%
+  filter(!coords %in% setdiff(wc_hadisst_coords$coords, wc_oisst_coords$coords)) %>%
+  select(-coords) %>%
   group_by(x, y, month) %>%
   mutate(sst_month_clim = mean(sst)) %>% 
   ungroup() %>%
@@ -321,17 +409,23 @@ wc_hadisst_df_clim <- wc_hadisst_df %>%
          sst_month_clim = NA) %>%  
   select(-sst)
 
-ebs_hadisst_df_clim <- ebs_hadisst_df %>%
-  group_by(x, y, month) %>%
-  mutate(sst_month_clim = mean(sst)) %>% 
-  ungroup() %>%
-  rename("date_join"=time) %>%
-  mutate(sst_month_anom = sst-sst_month_clim,  
-         dataset = "HadISST",
-         sst_month_clim = NA) %>%  
-  select(-sst)
+# ebs_hadisst_df_clim <- ebs_hadisst_df %>%
+#   mutate(coords = paste0(x, ",", y)) %>%
+#   filter(!coords %in% setdiff(ebs_hadisst_coords$coords, ebs_oisst_coords$coords)) %>%
+#   select(-coords) %>%
+#   group_by(x, y, month) %>%
+#   mutate(sst_month_clim = mean(sst)) %>% 
+#   ungroup() %>%
+#   rename("date_join"=time) %>%
+#   mutate(sst_month_anom = sst-sst_month_clim,  
+#          dataset = "HadISST",
+#          sst_month_clim = NA) %>%  
+#   select(-sst)
 
-neus_oisst_df_clim <- neus_oisst_df %>%
+neus_oisst_df_clim <- neus_oisst_df %>% 
+  mutate(coords = paste0(x, ",", y)) %>%
+  filter(!coords %in% setdiff(neus_oisst_coords$coords, neus_hadisst_coords$coords)) %>% # get rid of grid cells missing from hadISST
+  select(-coords) %>%
   group_by(x, y, year, month)  %>%
   summarise(sst_month = median(sst)) %>% # convert into monthly medians for comparability with HadISST before doing anything else; using median instead of mean because it is less sensitive to outliers
   group_by(x, y, month) %>%
@@ -342,18 +436,10 @@ neus_oisst_df_clim <- neus_oisst_df %>%
          dataset="OISST") %>% # prepare for joining to hadISST 
   select(-sst_month)
 
-wc_oisst_df_clim <- wc_oisst_df %>%
-  group_by(x, y, year, month)  %>%
-  summarise(sst_month = median(sst)) %>% 
-  group_by(x, y, month) %>%
-  mutate(sst_month_clim = mean(sst_month)) %>%
-  ungroup() %>%
-  mutate(sst_month_anom = sst_month-sst_month_clim,
-         date_join = as_date(paste0(year, "-", month, "-16")),
-         dataset="OISST") %>%  
-  select(-sst_month)
-
-ebs_oisst_df_clim <- ebs_oisst_df %>%
+wc_oisst_df_clim <- wc_oisst_df %>% 
+  mutate(coords = paste0(x, ",", y)) %>%
+  filter(!coords %in% setdiff(wc_oisst_coords$coords, wc_hadisst_coords$coords)) %>%
+  select(-coords) %>%
   group_by(x, y, year, month)  %>%
   summarise(sst_month = median(sst)) %>% 
   group_by(x, y, month) %>%
@@ -386,14 +472,25 @@ wc_df_clim <- wc_hadisst_df_clim %>%
   ungroup() %>%
   mutate(sst = sst_month_clim + sst_month_anom) 
 
-ebs_df_clim <- ebs_hadisst_df_clim %>%
-  filter(date_join < min(ebs_oisst_df_clim$date_join)) %>% # keep only early dates 
-  bind_rows(ebs_oisst_df_clim) %>%
+# EBS is treated differently because we don't need hadISST years 
+# some of this script is redundant (don't actually need to calculate climatology + anomaly here because we aren't combining datasets) but keeping it so columns/dfs are comparable to other regions
+ebs_df_clim <- ebs_oisst_df %>%
+  filter(year >= min_ebs_year_needed) %>% # DROP EARLY YEARS OF OISST 
+  group_by(x, y, year, month)  %>%
+  summarise(sst_month = median(sst)) %>% 
   group_by(x, y, month) %>%
-  arrange(year) %>%
-  tidyr::fill(sst_month_clim, .direction="up") %>% 
+  mutate(sst_month_clim = mean(sst_month)) %>%
   ungroup() %>%
+  mutate(sst_month_anom = sst_month-sst_month_clim,
+         date_join = as_date(paste0(year, "-", month, "-16")),
+         dataset="OISST") %>%  
+  select(-sst_month) %>%
   mutate(sst = sst_month_clim + sst_month_anom) 
+
+# check there are no NAs
+neus_df_clim  %>% filter(is.na(sst))
+wc_df_clim  %>% filter(is.na(sst))
+ebs_df_clim  %>% filter(is.na(sst))
 
 # save all dfs
 saveRDS(neus_df_clim, here("processed-data","neus_sst_corrected.rds"))
@@ -405,8 +502,7 @@ saveRDS(ebs_df_clim, here("processed-data","ebs_sst_corrected.rds"))
 #####################
 
 if(generate_supplementary_plots==TRUE) {
-  
-  library(Rcolorbrewer)
+  library(RColorBrewer)
   
   # monthly climatology of each dataset over time, for 1982 onwards; need this to make a plot of climatologies and anomalies over time (since above, we filter out HadISST years after 1982)
   neus.reg.clim.hadisst <- neus_hadisst_df %>%
@@ -419,15 +515,6 @@ if(generate_supplementary_plots==TRUE) {
     mutate(dataset="HadISST")
   
   wc.reg.clim.hadisst <- wc_hadisst_df %>%
-    filter(year>=1982) %>%
-    group_by(x, y, month) %>%
-    summarise(sst_month_clim = mean(sst)) %>% 
-    ungroup() %>%
-    group_by(month) %>%
-    summarise(reg_month_clim = mean(sst_month_clim)) %>%
-    mutate(dataset="HadISST")
-  
-  ebs.reg.clim.hadisst <- ebs_hadisst_df %>%
     filter(year>=1982) %>%
     group_by(x, y, month) %>%
     summarise(sst_month_clim = mean(sst)) %>% 
@@ -469,28 +556,8 @@ if(generate_supplementary_plots==TRUE) {
           legend.position=c(0.2, 0.8))
   wc.clim.time.gg
   
-  ebs.clim.time.gg <- ebs_oisst_df_clim %>%
-    group_by(month) %>%
-    summarise(reg_month_clim = mean(sst_month_clim)) %>%
-    mutate(dataset="OISST") %>%
-    bind_rows(ebs.reg.clim.hadisst) %>%
-    ggplot() +
-    geom_line(aes(x=month, y=reg_month_clim, group=dataset, color=dataset), size=0.8) +
-    theme_bw() + 
-    scale_color_manual(values=c("#41C03F","mediumblue")) + 
-    scale_x_continuous(breaks=seq(1, 12, 1)) +
-    scale_y_continuous(breaks=seq(-1, 10, 1)) +
-    labs(x="Month", y="Climatological Mean SST (°C)", title="Eastern Bering Sea") +
-    theme(legend.title=element_blank(),
-          legend.position=c(0.2, 0.8))
-  ebs.clim.time.gg
-  
   ggsave(neus.clim.time.gg, filename=here("results","sst_climatologies_time_neus.png"), height=5, width=4, dpi=160)
   ggsave(wc.clim.time.gg, filename=here("results","sst_climatologies_time_wc.png"), height=5, width=4, dpi=160)
-  
-  ggsave(ebs.clim.time.gg, filename=here("results","sst_climatologies_time_ebs.png"), height=5, width=4, dpi=160)
-  
-  # no more plots of EBS--we aren't using HadISST years and the climatologies are really similar anyway
   
   # order months by mean temperature for plotting colors
   neus.month.labels <- neus_oisst_df_clim %>%
