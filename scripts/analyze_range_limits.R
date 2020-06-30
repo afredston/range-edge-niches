@@ -164,7 +164,7 @@ dat.models.groups <- dat.models %>%
 
 # species shifts vs time
 
-spp.bayes.lm.df <- NULL
+spp.bayes.edge.lm.df <- NULL
 for(i in unique(dat.models$species)) {
   dfprep1 <- dat.models[dat.models$species==i,] # subdivide by species 
   for(j in unique(dfprep1$region)) {
@@ -174,62 +174,79 @@ for(i in unique(dat.models$species)) {
       spp.bayes.lm <- try(stan_glm(Estimate ~ year, 
                                    data=df, 
                                    family=gaussian(), 
-                                   iter = 12000,
-                                   warmup = 2000,
-                                   adapt_delta = 0.95,
+                                   iter = 40000,
+                                   warmup = 10000,
+                                   adapt_delta = 0.99,
                                    chains = 4,
                                    cores = 1,
                                    prior = normal(0, 50),
                                    weights = 1/(Std.Error^2)
-                                   )) # centered on 0 to allow negative coefficients for some species. SD of 50 intended to exceed upper range of marine climate velocities (around 200 km/dec) in Burrows et al 2011
+      )) # centered on 0 to allow negative coefficients for some species. SD of 50 intended to exceed upper range of marine climate velocities (around 200 km/dec) in Burrows et al 2011
       if(!class(spp.bayes.lm)[1] == "try-error") { # adding try() here because some edges are so invariant that the model fails 
         spp.bayes.lm.tidy <- tidy_draws(spp.bayes.lm) %>%
           mutate(species = paste0(i),
                  region = paste0(j),
-                 quantile = paste0(k))
-        spp.bayes.lm.df <- rbind(spp.bayes.lm.df, spp.bayes.lm.tidy)
+                 quantile = paste0(k),
+                 intercept.rhat = summary(spp.bayes.lm)[,"Rhat"][1],
+                 year_match.rhat = summary(spp.bayes.lm)[,"Rhat"][2],
+                 sigma.rhat = summary(spp.bayes.lm)[,"Rhat"][3])
+        spp.bayes.edge.lm.df <- rbind(spp.bayes.edge.lm.df, spp.bayes.lm.tidy)
       }
     }
   }
 }
-bayes.lm.time.gg <- spp.bayes.lm.df  %>%
-  group_by(.draw, region) %>%
-  mutate(mean.param = mean(year) ) %>%
-  ungroup() %>% 
-  select(.draw, mean.param, region) %>%
-  distinct() %>%
-  ggplot() +
-  theme_bw() +
-  geom_density(aes(x=mean.param, fill=region), color="black", alpha=0.5) +
-  scale_fill_brewer(type="seq", palette="YlGnBu", labels=c("Eastern Bering Sea","Northeast","West Coast")) +
-  labs(x="Coefficient of Edge vs Time (km/yr)", y="Density", fill="Region") +
-  theme(legend.position="bottom") +
-  NULL
-bayes.lm.time.gg
-ggsave(bayes.lm.time.gg, width=3, height=4, dpi=160, filename=here("results","edge_coefficients_time.png"), scale=1.6)
 
-bayes.lm.time.edgetype.gg <- spp.bayes.lm.df  %>%
-  group_by(.draw, region, quantile) %>%
-  mutate(mean.param = mean(year) ) %>%
-  ungroup() %>% 
-  select(.draw, mean.param, region, quantile) %>%
-  distinct() %>%
-  mutate(quantile=recode(quantile,
-                         quantile_0.01="Warm Limit",
-                         quantile_0.99="Cold Limit")) %>%
-  ggplot() +
-  theme_bw() +
-  geom_density(aes(x=mean.param, fill=region), color="black", alpha=0.5) +
-  scale_fill_brewer(type="seq", palette="YlGnBu", labels=c("Eastern Bering Sea","Northeast","West Coast")) +
-  labs(x="Coefficient of Edge vs Time (km/yr)", y="Density", fill="Region") +
-  theme(legend.position="bottom") +
-  facet_wrap(~quantile) +
-  NULL
-bayes.lm.time.edgetype.gg
-ggsave(bayes.lm.time.edgetype.gg, width=6, height=4, dpi=160, filename=here("results","edge_coefficients_time_edgetype.png"), scale=1.6)
+# check for convergence 
+quantile(spp.bayes.edge.lm.df$intercept.rhat)
+quantile(spp.bayes.edge.lm.df$year_match.rhat)  
+quantile(spp.bayes.edge.lm.df$sigma.rhat) # this previously caused estimation problems, doesn't appear to be doing that anymore  
 
-# edge shift stats by region
-spp.bayes.lm.df %>%
+spp.bayes.edge.filter <- spp.bayes.edge.lm.df %>% 
+  group_by(region, species, quantile) %>%
+  mutate(max.rhat = max(intercept.rhat, year_match.rhat, sigma.rhat)) %>%
+  filter(max.rhat <= 1.1) # get rid of spp*region*edge combos where one of the edge ~ time models didn't converge--just a check--may not get rid of any 
+
+setdiff(spp.bayes.edge.lm.df %>% select(region, species, quantile) %>% distinct(), spp.bayes.edge.filter %>% select(region, species, quantile) %>% distinct()) # 0 at present, all models converged
+
+# plot posteriors 
+# bayes.lm.time.gg <- spp.bayes.edge.lm.df  %>%
+#   group_by(.draw, region) %>%
+#   mutate(mean.param = mean(year) ) %>%
+#   ungroup() %>% 
+#   select(.draw, mean.param, region) %>%
+#   distinct() %>%
+#   ggplot() +
+#   theme_bw() +
+#   geom_density(aes(x=mean.param, fill=region), color="black", alpha=0.5) +
+#   scale_fill_brewer(type="seq", palette="YlGnBu", labels=c("Eastern Bering Sea","Northeast","West Coast")) +
+#   labs(x="Coefficient of Edge vs Time (km/yr)", y="Density", fill="Region") +
+#   theme(legend.position="bottom") +
+#   NULL
+# bayes.lm.time.gg
+# ggsave(bayes.lm.time.gg, width=3, height=4, dpi=160, filename=here("results","edge_coefficients_time.png"), scale=1.6)
+
+# bayes.lm.time.edgetype.gg <- spp.bayes.edge.lm.df  %>%
+#   group_by(.draw, region, quantile) %>%
+#   mutate(mean.param = mean(year) ) %>%
+#   ungroup() %>% 
+#   select(.draw, mean.param, region, quantile) %>%
+#   distinct() %>%
+#   mutate(quantile=recode(quantile,
+#                          quantile_0.01="Warm Limit",
+#                          quantile_0.99="Cold Limit")) %>%
+#   ggplot() +
+#   theme_bw() +
+#   geom_density(aes(x=mean.param, fill=region), color="black", alpha=0.5) +
+#   scale_fill_brewer(type="seq", palette="YlGnBu", labels=c("Eastern Bering Sea","Northeast","West Coast")) +
+#   labs(x="Coefficient of Edge vs Time (km/yr)", y="Density", fill="Region") +
+#   theme(legend.position="bottom") +
+#   facet_wrap(~quantile) +
+#   NULL
+# bayes.lm.time.edgetype.gg
+# ggsave(bayes.lm.time.edgetype.gg, width=6, height=4, dpi=160, filename=here("results","edge_coefficients_time_edgetype.png"), scale=1.6)
+
+# edge shift stats pooled by region
+spp.bayes.edge.lm.df %>%
   group_by(.draw, region) %>%
   summarise(mean.year = mean(year)) %>%
   group_by(region) %>%
@@ -238,8 +255,8 @@ spp.bayes.lm.df %>%
             lower=quantile(mean.year, 0.05),
             upper=quantile(mean.year, 0.95))
 
-# edge shift stats by region and edgetype
-spp.bayes.lm.df %>%
+# edge shift stats pooled by region and edgetype
+spp.bayes.edge.lm.df %>%
   group_by(.draw, region, quantile) %>%
   summarise(mean.year = mean(year)) %>%
   group_by(region, quantile) %>%
@@ -248,7 +265,30 @@ spp.bayes.lm.df %>%
             lower=quantile(mean.year, 0.05),
             upper=quantile(mean.year, 0.95))
 
-spp.bayes.lm.df.summary <- spp.bayes.lm.df %>%
+# edge shift stats pooled by taxon group 
+spp.bayes.edge.lm.df %>%
+  left_join(dat.models.groups) %>%
+  group_by(.draw, taxongroup) %>%
+  summarise(mean.year = mean(year)) %>%
+  group_by(taxongroup) %>%
+  summarise(mean=mean(mean.year),
+            median=median(mean.year),
+            lower=quantile(mean.year, 0.05),
+            upper=quantile(mean.year, 0.95))
+
+# pooled by taxon group and edge type
+spp.bayes.edge.lm.df %>%
+  left_join(dat.models.groups) %>%
+  group_by(.draw, taxongroup, quantile) %>%
+  summarise(mean.year = mean(year)) %>%
+  group_by(taxongroup, quantile) %>%
+  summarise(mean=mean(mean.year),
+            median=median(mean.year),
+            lower=quantile(mean.year, 0.05),
+            upper=quantile(mean.year, 0.95))
+
+# species-specific results
+spp.bayes.edge.lm.df.summary <- spp.bayes.edge.lm.df %>%
   group_by(.draw, species, region, quantile) %>%
   summarise(mean.year = mean(year)) %>%
   group_by(species, region, quantile) %>%
@@ -256,7 +296,8 @@ spp.bayes.lm.df.summary <- spp.bayes.lm.df %>%
             median=median(mean.year),
             lower=quantile(mean.year, 0.05),
             upper=quantile(mean.year, 0.95))
-write_csv(spp.bayes.lm.df.summary, here("results","species_edge_shifts_vs_time.csv"))
+
+write_csv(spp.bayes.edge.lm.df.summary, here("results","species_edge_shifts_vs_time.csv"))
 
 #######################
 ### predict temperatures at edges 
@@ -300,6 +341,7 @@ neus.sst.prepgam <- neus.sst %>%
   mutate(year_match = as.factor(year_match)) 
 
 # set up GAMs for coastal and NW axes 
+# note that the 99, 01 names aren't really appropriate anymore now that we are using monthly means
 ebs.sst.temp.gam.mean <- gam(sstmean ~ year_match + s(NW_km, by=year_match), data=ebs.sst.prepgam)
 ebs.sst.temp.gam.99 <- gam(sstmax ~ year_match + s(NW_km, by=year_match), data=ebs.sst.prepgam)
 ebs.sst.temp.gam.01 <- gam(sstmin ~ year_match + s(NW_km, by=year_match), data=ebs.sst.prepgam)
@@ -405,7 +447,7 @@ for(i in unique(dat.predict.niche$species)) {
                                      prior = normal(0, 0.1), # exceeds highest rates of warming we found in the paper which were around 0.04 C/yr
                                      control = list(max_treedepth = 20),
                                      weights = 1/(sstSE^2)
-                                     ))
+        ))
         if(!class(spp.bayes.lm)[1] == "try-error") { # adding try() here because some edges are so invariant that the model fails 
           spp.bayes.lm.tidy <- tidy_draws(spp.bayes.lm) %>%
             mutate(species = paste0(i),
@@ -464,7 +506,7 @@ spp.bayes.niche.groups <- spp.bayes.niche.lm.stats %>%
   group_by(region, quantile, species) %>% 
   mutate(niche.group = ifelse(min(abs(mean)) < 0.01, "good_tracker", # if ONE temp extreme has zero change -> good tracker 
                               ifelse(TRUE %in% crosses0, "partial_tracker", "non_tracker")) # if ONE temp extreme crosses zero -> lagged tracker 
-         ) %>%
+  ) %>%
   select(region, quantile, species, niche.group) %>% 
   distinct()
 write_csv(spp.bayes.niche.groups, here("results","species_by_thermal_niche_group.csv"))
@@ -476,13 +518,13 @@ spp.bayes.niche.groups %>% left_join(dat.models.groups) %>% group_by(region, tax
 spp.bayes.niche.groups %>% group_by(niche.group, region) %>% summarise(n=n()) # by region and niche grouping
 spp.bayes.niche.groups %>% group_by(niche.group, quantile) %>% summarise(n=n()) # by edge type and niche grouping
 spp.bayes.niche.groups %>% group_by(region, quantile) %>% summarise(n=n()) # by region and edge type
-spp.bayes.niche.groups %>% group_by(region, quantile) %>% summarise(n=n()) # by region, niche grouping, and edge type
+spp.bayes.niche.groups %>% group_by(region, quantile, niche.group) %>% summarise(n=n()) # by region, niche grouping, and edge type
 
 
 # of the temperature-independent species, which had a significant edge shift over time? 
 spp.tih <- spp.bayes.niche.groups %>%
   filter(niche.group=="non_tracker") %>%
-  left_join(spp.bayes.lm.df.summary) %>%
+  left_join(spp.bayes.edge.lm.df.summary) %>%
   rowwise() %>%
   mutate(crosses0 = ifelse(lower<0 & upper>0, TRUE, FALSE)) %>%
   mutate(signif.shift = ifelse(TRUE %in% crosses0, "N", "Y"))

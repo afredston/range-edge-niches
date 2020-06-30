@@ -27,7 +27,7 @@ ebs_lonrange <- c(-179.5, -154)
 
 ebs.depth.cutoff <- 300
 neus.depth.cutoff <- 300
-wc.depth.cutoff <- 400
+wc.depth.cutoff <- 600
 
 # get bathymetry
 neus_bathy_raw <- rerddap::griddap("etopo180", longitude=neus_lonrange, latitude = neus_latrange, fields = "altitude")$data
@@ -61,4 +61,4 @@ ebs_bathy <- SpatialPointsDataFrame(coords=ebs_bathy_raw[,c("longitude","latitud
 
 saveRDS(neus_bathy, here("processed-data","neus_bathy_300m.rds"))
 saveRDS(ebs_bathy, here("processed-data","ebs_bathy_300m.rds"))
-saveRDS(wc_bathy, here("processed-data","wc_bathy_400m.rds"))
+saveRDS(wc_bathy, here("processed-data","wc_bathy_600m.rds"))

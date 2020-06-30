@@ -7,21 +7,25 @@ spp.bayes.lm.df.summary <- read_csv(here("results","species_edge_shifts_vs_time.
 edge.shift.df <- spp.bayes.niche.groups %>%
   left_join(spp.bayes.lm.df.summary) %>%
   arrange(desc(species)) %>%
-  mutate(species = str_to_sentence(species),
+  mutate(quantile = recode(quantile, "quantile_0.01"="Warm Edge","quantile_0.99"="Cold Edge"),
+         niche.group = recode(niche.group, "good_tracker" = "TNH", "partial_tracker" = "PTH", "non_tracker" = "TIH"),
+    species = str_to_sentence(species),
          species = factor(species, unique(species)),
-         quantile = as.factor(quantile))
+         quantile = as.factor(quantile),
+    niche.group = factor(niche.group, levels=c("TNH","PTH","TIH"))) 
 
 neus.edge.gg <- edge.shift.df %>%
   filter(region=="neus") %>%
   ggplot(aes(y=species, x=median, xmin=lower, xmax=upper, color=quantile, fill=quantile, shape=niche.group)) +
   geom_errorbarh() +
   geom_point() +
-  scale_color_manual(values=c('quantile_0.01'='#C7361D', 'quantile_0.99'='#3A4ED0')) +
+  scale_color_manual(values=c(`Warm Edge`='#C7361D', `Cold Edge`='#3A4ED0')) +
   geom_vline(xintercept=0, color="black") +
-  labs(y=NULL, x="Edge Shift (km/yr) \n                 ", title="Northeast") +
+  labs(y=NULL, x="Edge Shift (km/yr)", title="Northeast", fill="", color="", shape="") +
   scale_x_continuous(breaks=seq(-60, 60, 10), limits=c(-68, 68)) + 
   theme_bw() +
-  theme(legend.position = "bottom",
+  theme(legend.position = c(0.2, 0.9),
+  #      legend.title = element_blank(),
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         text=element_text(family="sans",size=10,color="black"),
@@ -37,12 +41,12 @@ wc.edge.gg <- edge.shift.df %>%
   ggplot(aes(y=species, x=median, xmin=lower, xmax=upper, color=quantile, fill=quantile, shape=niche.group)) +
   geom_errorbarh() +
   geom_point() +
-  scale_color_manual(values=c('quantile_0.01'='#C7361D', 'quantile_0.99'='#3A4ED0')) +
+  scale_color_manual(values=c(`Warm Edge`='#C7361D', `Cold Edge`='#3A4ED0')) +
   geom_vline(xintercept=0, color="black") +
-  labs(y=NULL, x="Edge Shift (km/yr) \n                 ", title="West Coast") +
+  labs(y=NULL, x="Edge Shift (km/yr)", title="West Coast", fill="", color="", shape="") +
   scale_x_continuous(breaks=seq(-60, 60, 10), limits=c(-68, 68)) + 
   theme_bw() +
-  theme(legend.position = "bottom",
+  theme(legend.position = "none",
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         text=element_text(family="sans",size=10,color="black"),
@@ -58,12 +62,12 @@ ebs.edge.gg <- edge.shift.df %>%
   ggplot(aes(y=species, x=median, xmin=lower, xmax=upper, color=quantile, fill=quantile, shape=niche.group)) +
   geom_errorbarh() +
   geom_point() +
-  scale_color_manual(values=c('quantile_0.01'='#C7361D', 'quantile_0.99'='#3A4ED0')) +
+  scale_color_manual(values=c(`Warm Edge`='#C7361D', `Cold Edge`='#3A4ED0')) +
   geom_vline(xintercept=0, color="black") +
-  labs(y=NULL, x="Edge Shift (km/yr) \n                 ", title="Eastern Bering Sea") +
-   scale_x_continuous(breaks=seq(-60, 60, 10), limits=c(-75, 75)) + 
+  labs(y=NULL, x="Edge Shift (km/yr)", title="Eastern Bering Sea", fill="", color="", shape="") +
+  scale_x_continuous(breaks=seq(-60, 60, 10), limits=c(-75, 75)) + 
   theme_bw() +
-  theme(legend.position = "bottom",
+  theme(legend.position = "none",
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         text=element_text(family="sans",size=10,color="black"),

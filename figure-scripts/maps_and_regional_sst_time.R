@@ -4,44 +4,20 @@ library(here)
 library(sf)
 library(purrr)
 library(broom)
+here <- here::here
 
 # load all temperature datasets 
-ebs_oisst <- read_rds(here("processed-data","ebs_oisst.rds"))$ebs_oisst %>% select(-altitude)
-ebs_hadisst <- read_rds(here("processed-data","ebs_hadisst.rds"))
-
-wc_oisst <- read_rds(here("processed-data","wc_oisst.rds"))$wc_oisst
-wc_hadisst <- read_rds(here("processed-data","wc_hadisst.rds")) # some of them are in list form depending on whether they were written out individually or in a group from crop_temp_all.R
-
-neus_oisst <- read_rds(here("processed-data","neus_oisst.rds"))$neus_oisst
-neus_hadisst <- read_rds(here("processed-data","neus_hadisst.rds"))$neus_hadisst
-
-# join hadisst to fill in early years, filter for correct year span, calculate monthly temperature values 
-# in the case of EBS this isn't really necessary since we only want years from 1988
-neus_sst <- neus_hadisst %>%
-  filter(time < min(neus_oisst$time)) %>%
-  bind_rows(neus_oisst) 
-
-wc_sst <- wc_hadisst %>%
-  filter(time < min(wc_oisst$time)) %>%
-  bind_rows(wc_oisst)
-
-ebs_sst <- ebs_hadisst %>%
-  filter(time < min(ebs_oisst$time)) %>% 
-  bind_rows(ebs_oisst) %>% 
-  filter(year>=1988) 
+neus_sst <- read_rds(here("processed-data","neus_sst_corrected.rds"))
+wc_sst <- read_rds(here("processed-data","wc_sst_corrected.rds"))
+ebs_sst <- read_rds(here("processed-data","ebs_sst_corrected.rds"))
 
 # note that temperature is calculated by: 1. getting monthly means for each cell 2. getting the means and extremes for a year for each cell (hottest, coldest, and average months) 3. calculating the average hottest, coldest, and average months across all cells in the region every year. this is designed to capture extreme temperature variation without being too sensitive to daily or cell-specific variation. in other words, it is measuring if hot months got hotter, cold months got less cold, or average months are creeping up in SST *on average across the region*. 
 
 neus_sst_summary <- neus_sst %>%
-  group_by(x, y, year, month) %>%
-  mutate(sst.month.mean = mean(sst)) %>%
-  ungroup() %>%
-  select(x, y, year, month, sst.month.mean) %>%
-  distinct() %>%
   group_by(x, y, year) %>%
-  mutate(cell.min = min(sst.month.mean),
-         cell.mean = mean(sst.month.mean),
-         cell.max = max(sst.month.mean)) %>%
+  mutate(cell.min = min(sst),
+         cell.mean = mean(sst),
+         cell.max = max(sst)) %>%
   ungroup() %>%
   select(x, y, year, cell.min, cell.mean, cell.max) %>%
   distinct()%>%
@@ -55,15 +31,10 @@ neus_sst_summary <- neus_sst %>%
   mutate(region="neus")
 
 wc_sst_summary <- wc_sst %>%
-  group_by(x, y, year, month) %>%
-  mutate(sst.month.mean = mean(sst)) %>%
-  ungroup() %>%
-  select(x, y, year, month, sst.month.mean) %>%
-  distinct() %>%
   group_by(x, y, year) %>%
-  mutate(cell.min = min(sst.month.mean),
-         cell.mean = mean(sst.month.mean),
-         cell.max = max(sst.month.mean)) %>%
+  mutate(cell.min = min(sst),
+         cell.mean = mean(sst),
+         cell.max = max(sst)) %>%
   ungroup() %>%
   select(x, y, year, cell.min, cell.mean, cell.max) %>%
   distinct()%>%
@@ -77,15 +48,10 @@ wc_sst_summary <- wc_sst %>%
   mutate(region="wc")
 
 ebs_sst_summary <- ebs_sst %>%
-  group_by(x, y, year, month) %>%
-  mutate(sst.month.mean = mean(sst)) %>%
-  ungroup() %>%
-  select(x, y, year, month, sst.month.mean) %>%
-  distinct() %>%
   group_by(x, y, year) %>%
-  mutate(cell.min = min(sst.month.mean),
-         cell.mean = mean(sst.month.mean),
-         cell.max = max(sst.month.mean)) %>%
+  mutate(cell.min = min(sst),
+         cell.mean = mean(sst),
+         cell.max = max(sst)) %>%
   ungroup() %>%
   select(x, y, year, cell.min, cell.mean, cell.max) %>%
   distinct()%>%
@@ -97,41 +63,6 @@ ebs_sst_summary <- ebs_sst %>%
   select(year, region_mean_min_sst, region_mean_mean_sst, region_mean_max_sst) %>%
   distinct() %>%
   mutate(region="ebs")
-
-# estimate trends in each temperature value with simple linear regressions
-
-lm_min_sst <- bind_rows(neus_sst_summary, wc_sst_summary, ebs_sst_summary) %>% 
-  group_by(region) %>%
-  nest() %>%
-  mutate(
-    model = purrr::map(data, ~lm(region_mean_min_sst ~ year, data=.x)),
-    tidymodel = purrr::map(model, tidy)
-  ) %>%
-  unnest(tidymodel) %>%
-  select(-data, -model) 
-lm_min_sst # min SST change over time (slope) has a p-value above 0.05 everywhere, although it's close in NEUS (p=0.0526, beta=0.0134)
-
-lm_mean_sst <- bind_rows(neus_sst_summary, wc_sst_summary, ebs_sst_summary) %>% 
-  group_by(region) %>%
-  nest() %>%
-  mutate(
-    model = purrr::map(data, ~lm(region_mean_mean_sst ~ year, data=.x)),
-    tidymodel = purrr::map(model, tidy)
-  ) %>%
-  unnest(tidymodel) %>%
-  select(-data, -model) 
-lm_mean_sst # mean SST increased in NEUS and actually decreased in WC; no significant change in EBS, although estimated slope is positive
-
-lm_max_sst <- bind_rows(neus_sst_summary, wc_sst_summary, ebs_sst_summary) %>% 
-  group_by(region) %>%
-  nest() %>%
-  mutate(
-    model = purrr::map(data, ~lm(region_mean_max_sst ~ year, data=.x)),
-    tidymodel = purrr::map(model, tidy)
-  ) %>%
-  unnest(tidymodel) %>%
-  select(-data, -model) 
-lm_max_sst # decrease in WC, increase in EBS, no change in NEUS 
 
 neusgg <- neus_sst_summary %>%
   pivot_longer(cols=c(region_mean_min_sst, region_mean_mean_sst, region_mean_max_sst), names_to = "sstvar", values_to = "sstvalue") %>%
@@ -187,14 +118,14 @@ ebsgg <- ebs_sst_summary %>%
         panel.grid.minor = element_blank()) + 
   NULL
 
-ggsave(neusgg, filename=here("results","neusplot.png"), height=2, width=2, dpi=160)
-ggsave(wcgg, filename=here("results","wcplot.png"), height=2, width=2,dpi=160)
-ggsave(ebsgg, filename=here("results","ebsplot.png"), height=2,width=2, dpi=160)
+ggsave(neusgg, filename=here("results","neus_sst_inset_plot.png"), height=2, width=2, dpi=160)
+ggsave(wcgg, filename=here("results","wc_sst_inset_plot.png"), height=2, width=2,dpi=160)
+ggsave(ebsgg, filename=here("results","ebs_sst_inset_plot.png"), height=2,width=2, dpi=160)
 
 # make inset maps of each region 
 neus_bathy <- readRDS(here("processed-data","neus_bathy_300m.rds"))
 ebs_bathy <- readRDS(here("processed-data","ebs_bathy_300m.rds"))
-wc_bathy <- readRDS(here("processed-data","wc_bathy_400m.rds"))
+wc_bathy <- readRDS(here("processed-data","wc_bathy_600m.rds"))
 usoutline <- rnaturalearth::ne_states("united states of america", returnclass = "sf") %>% 
   st_sf()
 
