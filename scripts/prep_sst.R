@@ -15,7 +15,7 @@ here <- here::here
 
 source(here("functions","sfc_as_cols.R"))
 
-generate_supplementary_plots = FALSE # toggle this off if you don't want the script to print out a bunch of extra plots exploring anomalies and climatologies of both SST datasets
+generate_supplementary_plots = TRUE # toggle this off if you don't want the script to print out a bunch of extra plots exploring anomalies and climatologies of both SST datasets
 
 #####################
 ### get ERDDAP data
@@ -196,24 +196,7 @@ useez <- eezs %>%
 #####################
 ### crop SST datasets to extent of masks 
 #####################
-
-# note that because HadISST is not downloaded with date in a date format (it's a character string), it ends up as the layer title rather than the @z dimension; let's fix that here 
-
-# neus_hadisst_times <- names(neus_hadisst_resample) %>%
-#   str_remove("X") %>%
-#   as.integer() %>%
-#   as_datetime()
-# 
-# wc_hadisst_times <- names(wc_hadisst_resample) %>%
-#   str_remove("X") %>%
-#   as.integer() %>%
-#   as_datetime()
-# 
-# ebs_hadisst_times <- names(ebs_hadisst_resample) %>%
-#   str_remove("X") %>%
-#   as.integer() %>%
-#   as_datetime()
-
+      
 neus_hadisst_crop <- mask(neus_hadisst_resample, as_Spatial(neus.bathy.mask)) 
 neus_oisst_crop1 <- mask(neus_oisst_brick1, as_Spatial(neus.bathy.mask))
 neus_oisst_crop2 <- mask(neus_oisst_brick2, as_Spatial(neus.bathy.mask))
@@ -354,28 +337,6 @@ ggplot() +
   geom_point(data=wc_oisst_coords %>% filter(coords %in% setdiff(wc_oisst_coords$coords, wc_hadisst_coords$coords)), aes(x=x, y=y), color="purple") +
   scale_x_continuous(limits=wc_lonrange) +
   scale_y_continuous(limits=wc_latrange)
-
-# ebs_hadisst_coords <- ebs_hadisst_df %>%
-#   select(x, y) %>%
-#   distinct() %>%
-#   mutate(coords = paste0(x, ",", y))
-# 
-# ebs_oisst_coords <- ebs_oisst_df %>%
-#   select(x, y) %>%
-#   distinct() %>%
-#   mutate(coords = paste0(x, ",", y))
-# 
-# setdiff(ebs_hadisst_coords$coords, ebs_oisst_coords$coords)
-# setdiff(ebs_oisst_coords$coords, ebs_hadisst_coords$coords)
-# 
-# ggplot() + 
-#   geom_sf(data=usoutline, color="#999999") +
-#   geom_point(data=ebs_hadisst_coords %>% filter(coords %in% setdiff(ebs_hadisst_coords$coords, ebs_oisst_coords$coords)
-# ), aes(x=x, y=y), color="pink") +
-#   geom_point(data=ebs_oisst_coords %>% filter(coords %in% setdiff(ebs_oisst_coords$coords, ebs_hadisst_coords$coords)
-# ), aes(x=x, y=y), color="purple") +
-#   scale_x_continuous(limits=ebs_lonrange) +
-#   scale_y_continuous(limits=ebs_latrange)
   
 #####################
 ### calculate climatologies 
@@ -388,7 +349,7 @@ neus_hadisst_df_clim <- neus_hadisst_df %>%
   filter(!coords %in% setdiff(neus_hadisst_coords$coords, neus_oisst_coords$coords)) %>% # get rid of grid cells that are missing from OISST
   select(-coords) %>% 
   group_by(x, y, month) %>%
-  mutate(sst_month_clim = mean(sst)) %>% # get climatology by month (average conditions across all instances of that month in that cell) 
+  mutate(sst_month_clim = mean(sst[time >= min(neus_oisst_df$time)])) %>% # get climatology by month (average conditions across all instances of that month in that cell) from the same time span used for the OISST climatology
   ungroup() %>%
   rename("date_join"=time) %>%
   mutate(sst_month_anom = sst-sst_month_clim, # get anomaly by month (how much hotter/colder that month is relative to the average )
@@ -401,7 +362,7 @@ wc_hadisst_df_clim <- wc_hadisst_df %>%
   filter(!coords %in% setdiff(wc_hadisst_coords$coords, wc_oisst_coords$coords)) %>%
   select(-coords) %>%
   group_by(x, y, month) %>%
-  mutate(sst_month_clim = mean(sst)) %>% 
+  mutate(sst_month_clim = mean(sst[time >= min(wc_oisst_df$time)])) %>% 
   ungroup() %>%
   rename("date_join"=time) %>%
   mutate(sst_month_anom = sst-sst_month_clim,  
@@ -623,11 +584,6 @@ if(generate_supplementary_plots==TRUE) {
       legend.position="none") # get rid of legend which plots over a peak--will be next to NEUS plot anyway
   wc.anom.time.gg
   ggsave(wc.anom.time.gg, filename=here("results","sst_anomalies_time_wc.png"), height=5, width=10, dpi=160)
-  
-  
-  # check that these distributions are not statistically different 
-  ks.test(neus_hadisst_df_clim$sst_month_anom,neus_oisst_df_clim$sst_month_anom, alternative="two.sided")
-  ks.test(wc_hadisst_df_clim$sst_month_anom,wc_oisst_df_clim$sst_month_anom, alternative="two.sided")
   
   # density plots of all cell-specific anomalies in each dataset
   neus.anom.pdf.gg <- neus_hadisst_df_clim %>% 
