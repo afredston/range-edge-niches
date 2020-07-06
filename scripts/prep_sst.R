@@ -690,5 +690,5 @@ if(generate_supplementary_plots==TRUE) {
   ggsave(neus.hadisst.anom.map, dpi=160, filename=here("results","sst_anomalies_map_neus_hadisst.png"), width=6.5, height=2.5, scale=1.8)
   ggsave(neus.oisst.anom.map, dpi=160, filename=here("results","sst_anomalies_map_neus_oisst.png"), width=6.5, height=2.5, scale=1.8)
   ggsave(wc.hadisst.anom.map, dpi=160, filename=here("results","sst_anomalies_map_wc_hadisst.png"), width=6.5, height=3.5, scale=1.5)
-  ggsave(neus.oisst.anom.map, dpi=160, filename=here("results","sst_anomalies_map_neus_oisst.png"), width=6.5, height=3.5, scale=1.5)
+  ggsave(wc.oisst.anom.map, dpi=160, filename=here("results","sst_anomalies_map_wc_oisst.png"), width=6.5, height=3.5, scale=1.5)
 }

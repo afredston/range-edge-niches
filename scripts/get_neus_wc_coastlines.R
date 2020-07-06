@@ -9,6 +9,7 @@ library(sf)
 library(rnaturalearth)
 library(raster)
 library(smoothr)
+library(ggplot2)
 
 usamap <- rnaturalearth::ne_countries(scale = "small", country = "united states of america", returnclass = "sf")[1] %>% 
   st_cast("MULTILINESTRING") # get basic map of the country 
@@ -66,4 +67,41 @@ wc.coastdistdat <- data.frame(wc.smoothgeom[, c('x','y')], seglength=c(0, wc.geo
 wc.coastdistdat$lengthfromhere <- cumsum(rev(wc.coastdistdat[,"seglength"]))
 saveRDS(wc.coastdistdat, here("processed-data","wc_coastdistdat.rds"))
 
-rm(list=ls())
+# make plots of each region's smoothing for Supplement
+
+usoutline <- rnaturalearth::ne_states("united states of america", returnclass = "sf") %>% 
+  st_sf()
+
+# just need one plot for WC
+wc.smoothmap <- ggplot() +
+  geom_sf(data=usoutline, color="#999999") +
+  geom_sf(data=wcmap %>% 
+            smoothr::smooth(method="ksmooth", smoothness=1), color="darkblue", lwd=2) + 
+  scale_x_continuous(limits=c(wc.xmin, wc.xmax)) +
+  scale_y_continuous(limits=c(wc.ymin, wc.ymax)) +
+  theme_bw() +
+  labs(title="Smoothness=1") +
+  theme(axis.text.x=element_text(angle=45))
+wc.smoothmap
+
+# iterate over NEUS smoothness values that we used 
+neus_smoothplot <- function(smoothval){
+  out <- ggplot() +
+    geom_sf(data=usoutline, color="#999999") +
+    geom_sf(data=neusmap %>% 
+              smoothr::smooth(method="ksmooth", smoothness=smoothval), color="darkblue", lwd=1.5) + 
+    scale_x_continuous(limits=c(neus.xmin, neus.xmax)) +
+    scale_y_continuous(limits=c(neus.ymin, neus.ymax)) +
+    theme_bw() +
+    labs(title=paste0("Smoothness=", smoothval)) +
+    theme(axis.text.x=element_text(angle=45)) 
+}
+
+neus.smoothmap.list <- lapply(seq(1, 8, 1), neus_smoothplot)
+
+neus.smoothmap <- do.call("grid.arrange", c(neus.smoothmap.list, ncol=3))
+
+ggsave(neus.smoothmap, dpi=160, height=7, width=7, file=here("results","smoothing_map_neus.png"))
+
+ggsave(wc.smoothmap, dpi=160, height=7, width=3, filename=here("results","smoothing_map_wc.png"))
+#rm(list=ls())
