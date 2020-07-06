@@ -196,7 +196,7 @@ useez <- eezs %>%
 #####################
 ### crop SST datasets to extent of masks 
 #####################
-      
+
 neus_hadisst_crop <- mask(neus_hadisst_resample, as_Spatial(neus.bathy.mask)) 
 neus_oisst_crop1 <- mask(neus_oisst_brick1, as_Spatial(neus.bathy.mask))
 neus_oisst_crop2 <- mask(neus_oisst_brick2, as_Spatial(neus.bathy.mask))
@@ -337,7 +337,7 @@ ggplot() +
   geom_point(data=wc_oisst_coords %>% filter(coords %in% setdiff(wc_oisst_coords$coords, wc_hadisst_coords$coords)), aes(x=x, y=y), color="purple") +
   scale_x_continuous(limits=wc_lonrange) +
   scale_y_continuous(limits=wc_latrange)
-  
+
 #####################
 ### calculate climatologies 
 #####################
@@ -618,4 +618,77 @@ if(generate_supplementary_plots==TRUE) {
   wc.anom.pdf.gg
   ggsave(wc.anom.pdf.gg, filename=here("results","sst_anomalies_density_wc.png"), height=5, width=5, dpi=160)
   
+  # make maps of anomalies to demonstrate they are randomly distributed in space 
+  
+  map_dates <- as_date(c("1985-10-16", "1995-07-16", "2005-04-16","2015-01-16"))
+  
+  neus.hadisst.anom.map <- neus_hadisst_df_clim %>% 
+    filter(date_join %in% map_dates) %>%
+    ggplot() + 
+    geom_sf(data=usoutline, color="#999999") +
+    geom_point(aes(x=x, y=y, fill=sst_month_anom, color=sst_month_anom)) +
+    scale_x_continuous(limits=neus_lonrange) +
+    scale_y_continuous(limits=neus_latrange) +
+    labs(x=element_blank(), y=element_blank(), title="Northeast HadISST", fill="Anomaly (°C)", color="Anomaly (°C)") +
+    theme_bw() +
+    ggplot2::scale_color_gradient2(low="#042C5B", mid="white", high="#5B0404") +
+    ggplot2::scale_fill_gradient2(low="#042C5B", mid="white", high="#5B0404") +
+    theme(legend.position = "right",
+          axis.text.x = element_text(angle=45)) +
+    facet_wrap(~date_join, ncol=4) +
+    NULL
+  
+  neus.oisst.anom.map <- neus_oisst_df_clim %>% 
+    filter(date_join %in% map_dates) %>%
+    ggplot() + 
+    geom_sf(data=usoutline, color="#999999") +
+    geom_point(aes(x=x, y=y, fill=sst_month_anom, color=sst_month_anom)) +
+    scale_x_continuous(limits=neus_lonrange) +
+    scale_y_continuous(limits=neus_latrange) +
+    labs(x=element_blank(), y=element_blank(), title="Northeast OISST", fill="Anomaly (°C)", color="Anomaly (°C)") +
+    theme_bw() +
+    ggplot2::scale_color_gradient2(low="#042C5B", mid="white", high="#5B0404") +
+    ggplot2::scale_fill_gradient2(low="#042C5B", mid="white", high="#5B0404") +
+    theme(legend.position = "right",
+          axis.text.x = element_text(angle=45)) +
+    facet_wrap(~date_join, ncol=4) +
+    NULL
+  
+  wc.hadisst.anom.map <- wc_hadisst_df_clim %>% 
+    filter(date_join %in% map_dates) %>%
+    ggplot() + 
+    geom_sf(data=usoutline, color="#999999") +
+    geom_point(aes(x=x, y=y, fill=sst_month_anom, color=sst_month_anom)) +
+    scale_x_continuous(limits=wc_lonrange) +
+    scale_y_continuous(limits=wc_latrange) +
+    labs(x=element_blank(), y=element_blank(), title="West Coast HadISST", fill="Anomaly (°C)", color="Anomaly (°C)") +
+    theme_bw() +
+    ggplot2::scale_color_gradient2(low="#042C5B", mid="white", high="#5B0404") +
+    ggplot2::scale_fill_gradient2(low="#042C5B", mid="white", high="#5B0404") +
+    theme(legend.position = "bottom",
+          axis.text.x = element_text(angle=45)) +
+    facet_wrap(~date_join, ncol=4) +
+    NULL
+  
+  
+  wc.oisst.anom.map <- wc_oisst_df_clim %>% 
+    filter(date_join %in% map_dates) %>%
+    ggplot() + 
+    geom_sf(data=usoutline, color="#999999") +
+    geom_point(aes(x=x, y=y, fill=sst_month_anom, color=sst_month_anom)) +
+    scale_x_continuous(limits=wc_lonrange) +
+    scale_y_continuous(limits=wc_latrange) +
+    labs(x=element_blank(), y=element_blank(), title="West Coast OISST", fill="Anomaly (°C)", color="Anomaly (°C)") +
+    theme_bw() +
+    ggplot2::scale_color_gradient2(low="#042C5B", mid="white", high="#5B0404") +
+    ggplot2::scale_fill_gradient2(low="#042C5B", mid="white", high="#5B0404") +
+    theme(legend.position = "bottom",
+          axis.text.x = element_text(angle=45)) +
+    facet_wrap(~date_join, ncol=4) +
+    NULL
+  
+  ggsave(neus.hadisst.anom.map, dpi=160, filename=here("results","sst_anomalies_map_neus_hadisst.png"), width=6.5, height=2.5, scale=1.8)
+  ggsave(neus.oisst.anom.map, dpi=160, filename=here("results","sst_anomalies_map_neus_oisst.png"), width=6.5, height=2.5, scale=1.8)
+  ggsave(wc.hadisst.anom.map, dpi=160, filename=here("results","sst_anomalies_map_wc_hadisst.png"), width=6.5, height=3.5, scale=1.5)
+  ggsave(neus.oisst.anom.map, dpi=160, filename=here("results","sst_anomalies_map_neus_oisst.png"), width=6.5, height=3.5, scale=1.5)
 }
