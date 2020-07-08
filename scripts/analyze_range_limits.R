@@ -529,108 +529,120 @@ spp.tih <- spp.bayes.niche.groups %>%
   mutate(crosses0 = ifelse(lower<0 & upper>0, TRUE, FALSE)) %>%
   mutate(signif.shift = ifelse(TRUE %in% crosses0, "N", "Y"))
 
+spp.tnh <- spp.bayes.niche.groups %>%
+  filter(niche.group=="good_tracker") %>%
+  left_join(spp.bayes.edge.lm.df.summary) %>%
+  rowwise() %>%
+  mutate(crosses0 = ifelse(lower<0 & upper>0, TRUE, FALSE)) %>%
+  mutate(signif.shift = ifelse(TRUE %in% crosses0, "N", "Y"),
+         sign.shift = ifelse(mean>0, "positive", "negative")) %>%
+  group_by(signif.shift, sign.shift) %>% 
+  summarise(n=n())
 
+##########################
+# Figure 1 example plots
+##########################
 
-# scatterplot 
-# dat.thermal.gg <- spp.bayes.niche.lm.stats %>%
-#   left_join(spp.bayes.niche.groups, by=c("region","quantile","species")) %>%
-#   ungroup() %>%
-#   pivot_wider(names_from=predicted.var, values_from=c(mean,median,lower,upper)) %>%
-#   mutate(region=factor(region, levels=c('neus','wc','ebs')),
-#          region=recode(region,
-#                        ebs="Eastern Bering Sea",
-#                        neus="Northeast",
-#                        wc="West Coast"),
-#          niche.group=factor(niche.group, levels=c('good_tracker','partial_tracker','non_tracker')),
-#          niche.group=recode(niche.group,
-#                             good_tracker="TNH",
-#                             partial_tracker="PTH",
-#                             non_tracker="TIH")) %>%
-#   ggplot(aes(x=mean_predict.sstmin, y=mean_predict.sstmax, group=niche.group)) +
-#   geom_point(aes(shape=niche.group, color=niche.group, fill=niche.group)) +
-#   scale_color_manual(values = c("TIH"="#fb8072","TNH"="deepskyblue4","PTH"="mediumpurple3")) +
-#   geom_errorbar(aes(x=mean_predict.sstmin, ymin=lower_predict.sstmax, ymax=upper_predict.sstmax, color=niche.group)) +
-#   geom_errorbarh(aes(y=mean_predict.sstmax, xmin=lower_predict.sstmin, xmax=upper_predict.sstmin, color=niche.group)) +
-#   geom_vline(xintercept=0, linetype="dashed") +
-#   geom_hline(yintercept=0, linetype="dashed") +
-#   theme_bw() +
-#   labs(x="Change in Cold Extreme at Edge (°C/year)", y="Change in Warm Extreme at Edge (°C/year)") +
-#   facet_wrap(~region) +
-#   theme(legend.position = "bottom",
-#         legend.title = element_blank()) +
-#   NULL
-# dat.thermal.gg
-# ggsave(dat.thermal.gg, filename=here("results","thermal_niche_time_coefficients.png"),dpi=160, width=10, height=4)
+# make example plots for methods schematic 
+ex.spp1 <- "chionoecetes bairdi" # tanner crab; good tracker, cold edge, EBS
+ex.spp2 <- "hippoglossus hippoglossus" # atlantic halibut; non tracker, warm edge, NEUS
+ex.spp3 <- "ophiodon elongatus" # petrale sole; partial tracker, warm edge, WC
 
-# # barplot by region 
-# gg.niche.regions <- spp.bayes.niche.lm.stats %>%
-#   left_join(spp.bayes.niche.groups, by=c("region","quantile","species")) %>%
-#   ungroup() %>%
-#   pivot_wider(names_from=predicted.var, values_from=c(mean,median,lower,upper)) %>%
-#   mutate(region=factor(region, levels=c('neus','wc','ebs')),
-#          region=recode(region,
-#                        ebs="Eastern Bering Sea",
-#                        neus="Northeast",
-#                        wc="West Coast"),
-#          niche.group=factor(niche.group, levels=c('good_tracker','partial_tracker','non_tracker')),
-#          niche.group=recode(niche.group,
-#                             good_tracker="TNH",
-#                             partial_tracker="PTH",
-#                             non_tracker="TIH")) %>%
-#   ggplot(aes(region)) +
-#   geom_bar(aes(fill=niche.group), color="black") +
-#   scale_fill_manual(values=c("white","darkgrey","black")) +
-#   theme_bw() +
-#   labs(x=NULL, y=NULL)+
-#   theme(legend.position = "bottom",
-#         legend.title = element_blank()) +
-#   NULL
-# gg.niche.regions
-# 
-# # barplot by edge type 
-# gg.niche.quantile <- spp.bayes.niche.lm.stats %>%
-#   left_join(spp.bayes.niche.groups, by=c("region","quantile","species")) %>%
-#   ungroup() %>%
-#   pivot_wider(names_from=predicted.var, values_from=c(mean,median,lower,upper)) %>%
-#   mutate(quantile=factor(quantile, levels=c('quantile_0.01','quantile_0.99')),
-#          quantile=recode(quantile,
-#                          quantile_0.01="Warm Edge",
-#                          quantile_0.99="Cold Edge"),
-#          niche.group=factor(niche.group, levels=c('good_tracker','partial_tracker','non_tracker')),
-#          niche.group=recode(niche.group,
-#                             good_tracker="TNH",
-#                             partial_tracker="PTH",
-#                             non_tracker="TIH")) %>%
-#   ggplot(aes(quantile)) +
-#   geom_bar(aes(fill=niche.group), color="black") +
-#   scale_fill_manual(values=c("white","darkgrey","black")) +
-#   theme_bw() +
-#   labs(x=NULL, y=NULL)+
-#   theme(legend.position = "bottom",
-#         legend.title = element_blank()) +
-#   NULL
-# gg.niche.quantile
-# 
-# gg.niche.taxa <- spp.bayes.niche.lm.stats %>%
-#   left_join(spp.bayes.niche.groups, by=c("region","quantile","species")) %>%
-#   left_join(dat.models.groups) %>% 
-#   ungroup() %>%
-#   pivot_wider(names_from=predicted.var, values_from=c(mean,median,lower,upper)) %>%
-#   mutate(
-#     niche.group=factor(niche.group, levels=c('good_tracker','partial_tracker','non_tracker')),
-#     niche.group=recode(niche.group,
-#                        good_tracker="TNH",
-#                        partial_tracker="PTH",
-#                        non_tracker="TIH")) %>%
-#   ggplot(aes(taxongroup)) +
-#   geom_bar(aes(fill=niche.group), color="black") +
-#   scale_fill_manual(values=c("white","darkgrey","black")) +
-#   theme_bw() +
-#   labs(x=NULL, y=NULL)+
-#   theme(legend.position = "bottom",
-#         legend.title = element_blank()) +
-#   NULL
-# gg.niche.taxa
-# ggsave(gg.niche.regions, filename=here("results","niche_barplot_region.png"), dpi=300, width=4, height=7, scale=0.8)
-# ggsave(gg.niche.quantile, filename=here("results","niche_barplot_quantile.png"), dpi=300, width=3, height=7, scale=0.8)
-# ggsave(gg.niche.taxa, filename=here("results","niche_barplot_taxa.png"), dpi=300, width=3, height=7, scale=0.8)
+# if species are updated, be sure to change year limits in the time-series figures below 
+
+ex.spp.bayes.gg1 <- spp.bayes.niche.filter %>%
+  filter(species==ex.spp1) %>%
+  group_by(.draw, predicted.var) %>%
+  mutate(mean.param = mean(year_match) ) %>%
+  ungroup() %>%
+  select(.draw, mean.param, predicted.var) %>%
+  distinct() %>%
+  ggplot() +
+  theme_bw() +
+  geom_density(aes(x=mean.param, fill=predicted.var), color="black", alpha=0.5) +
+  scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+  labs(x="Posterior Distribution of Coefficient (°C/year)",y="Density", fill=NULL) +
+  theme(legend.position="bottom") +
+  NULL
+ex.spp.bayes.gg1
+
+ex.spp.bayes.gg2 <- spp.bayes.niche.filter %>%
+  filter(species==ex.spp2) %>%
+  group_by(.draw, predicted.var) %>%
+  mutate(mean.param = mean(year_match) ) %>%
+  ungroup() %>%
+  select(.draw, mean.param, predicted.var) %>%
+  distinct() %>%
+  ggplot() +
+  theme_bw() +
+  geom_density(aes(x=mean.param, fill=predicted.var), color="black", alpha=0.5) +
+  scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+  labs(x="Posterior Distribution of Coefficient (°C/year)",y="Density", fill=NULL) +
+  theme(legend.position="bottom") +
+  NULL
+ex.spp.bayes.gg2
+
+ex.spp.bayes.gg3 <- spp.bayes.niche.filter %>%
+  filter(species==ex.spp3) %>%
+  group_by(.draw, predicted.var) %>%
+  mutate(mean.param = mean(year_match) ) %>%
+  ungroup() %>%
+  select(.draw, mean.param, predicted.var) %>%
+  distinct() %>%
+  ggplot() +
+  theme_bw() +
+  geom_density(aes(x=mean.param, fill=predicted.var), color="black", alpha=0.5) +
+  scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+  labs(x="Posterior Distribution of Coefficient (°C/year)",y="Density", fill=NULL) +
+  theme(legend.position="bottom") +
+  NULL
+ex.spp.bayes.gg3
+
+ex.spp.time.gg1 <- dat.predict.niche %>%
+  filter(species==ex.spp1) %>%
+  mutate(species = str_to_sentence(species)) %>%
+  ggplot() +
+  geom_point(aes(x=year_match, y=sst, color=predicted.var)) +
+  geom_line(aes(x=year_match, y=sst, color=predicted.var)) +
+  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+  theme_bw() +
+  labs(x="Year",y="Sea Surface Temperature at Edge (°C)", color=NULL) +
+  theme(legend.position="bottom")+
+  scale_x_continuous(limits=c(1988, 2018), breaks=seq(1988, 2018, 4))+
+  NULL
+ex.spp.time.gg1
+
+ex.spp.time.gg2 <- dat.predict.niche %>%
+  filter(species==ex.spp2) %>%
+  mutate(species = str_to_sentence(species)) %>%
+  ggplot() +
+  geom_point(aes(x=year_match, y=sst, color=predicted.var)) +
+  geom_line(aes(x=year_match, y=sst, color=predicted.var)) +
+  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+  theme_bw() +
+  labs(x="Year",y="Sea Surface Temperature at Edge (°C)", color=NULL) +
+  theme(legend.position="bottom")+
+  scale_x_continuous(limits=c(1968, 2018), breaks=seq(1968, 2018, 4))+
+  NULL
+ex.spp.time.gg2
+
+ex.spp.time.gg3 <- dat.predict.niche %>%
+  filter(species==ex.spp3) %>%
+  mutate(species = str_to_sentence(species)) %>%
+  ggplot() +
+  geom_point(aes(x=year_match, y=sst, color=predicted.var)) +
+  geom_line(aes(x=year_match, y=sst, color=predicted.var)) +
+  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+  theme_bw() +
+  labs(x="Year",y="Sea Surface Temperature at Edge (°C)", color=NULL) +
+  theme(legend.position="bottom")+
+  scale_x_continuous(limits=c(1976, 2018), breaks=seq(1976, 2018, 5))+
+  NULL
+ex.spp.time.gg3
+
+ggsave(ex.spp.bayes.gg1, dpi=160, width=4, height=4, filename=here("results","example_1_posterior.png"))
+ggsave(ex.spp.bayes.gg2, dpi=160, width=4, height=4, filename=here("results","example_2_posterior.png"))
+ggsave(ex.spp.bayes.gg3, dpi=160, width=4, height=4, filename=here("results","example_3_posterior.png"))
+ggsave(ex.spp.time.gg1, dpi=160, width=4, height=4, filename=here("results","example_1_niche.png"))
+ggsave(ex.spp.time.gg2, dpi=160, width=4, height=4, filename=here("results","example_2_niche.png"))
+ggsave(ex.spp.time.gg3, dpi=160, width=4, height=4, filename=here("results","example_3_niche.png"))
