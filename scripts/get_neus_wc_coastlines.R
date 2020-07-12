@@ -10,6 +10,7 @@ library(rnaturalearth)
 library(raster)
 library(smoothr)
 library(ggplot2)
+library(gridExtra)
 
 usamap <- rnaturalearth::ne_countries(scale = "small", country = "united states of america", returnclass = "sf")[1] %>% 
   st_cast("MULTILINESTRING") # get basic map of the country 

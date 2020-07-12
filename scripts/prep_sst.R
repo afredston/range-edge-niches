@@ -2,20 +2,20 @@
 
 library(rerddap)
 library(raster)
-library(oceanmap)
 library(sf)
 library(tidyverse)
 library(here)
 library(tabularaster)
 library(lubridate)
 library(purrr)
+library(rnaturalearth)
 
 map <- purrr::map
 here <- here::here
 
 source(here("functions","sfc_as_cols.R"))
 
-generate_supplementary_plots = TRUE # toggle this off if you don't want the script to print out a bunch of extra plots exploring anomalies and climatologies of both SST datasets
+generate_supplementary_plots = FALSE # toggle this off if you don't want the script to print out a bunch of extra plots exploring anomalies and climatologies of both SST datasets
 
 #####################
 ### get ERDDAP data
@@ -131,39 +131,74 @@ wc.bathy.file <- here("processed-data","wc_bathy_mask.shp")
 ebs.bathy.file <- here("processed-data","ebs_bathy_mask.shp")
 
 # choose how far out into the ocean you want temperature data
-ebs.depth.cutoff <- 300
-neus.depth.cutoff <- 300
-wc.depth.cutoff <- 600 # WC shelf is very steep so I increased this from 300m in 100m increments until the bathymetric mask did not have big gaps along the coast 
+ebs.depth.cutoff <- -300
+neus.depth.cutoff <- -300
+wc.depth.cutoff <- -600 # WC shelf is very steep so I increased this from 300m in 100m increments until the bathymetric mask did not have big gaps along the coast 
 
+# get a bunch of shapefiles to use to crop data 
+# US EEZ 
+eezs <- st_read(here("raw-data/World_EEZ_v10_20180221","eez_v10.shp")) # download from http://www.marineregions.org/downloads.php and move to raw-data folder
+useez <- eezs %>% 
+  dplyr::filter(Sovereign1 == "United States") # need to get the new bathy masks in the same CRS
+
+# coarse country outlines  
+countries <- ne_countries(type = 'countries', scale = 'small')
 
 # get bathymetric masks; slow 
 if(!file.exists(wc.bathy.file)) {
   
   # get masks for each region; same bounding boxes as SST data above. using 4-minute resolution (default)
-  wc.bathy <- get.bathy(lon = wc_lonrange, lat = wc_latrange, visualize = F, res = 4) 
+ # wc.bathy <- get.bathy(lon = wc_lonrange, lat = wc_latrange, visualize = F, res = 4) 
+  bathy <- "etopo180" # https://coastwatch.pfeg.noaa.gov/erddap/griddap/etopo180.html 
+    
+  wc.bathy.grid <- griddap(bathy, latitude=wc_latrange, longitude=wc_lonrange) # this includes land topography in addition to ocean bathymetry 
   
-  wc.bathy.mask <- wc.bathy %>% 
-    as("SpatialPolygonsDataFrame") %>% 
-    st_as_sf() %>% # retains CRS 
-    dplyr::filter(layer <= wc.depth.cutoff) %>% # get rid of points over X m deep
-    st_intersection(st_union(useez)) %>% # keep only points within the EEZ; crop out lakes, Canada 
-    st_union() # merge polygons into one 
-  # plot(wc.bathy.mask)
+  # get file name
+  wc.topo.file <- wc.bathy.grid$summary$filename
   
+  # read in as a raster 
+  wc.bathy.raster <- raster(wc.topo.file)
+  
+  # filter out values on land or below depth cutoff 
+  wc.bathy.crop <- wc.bathy.raster
+  wc.bathy.crop[wc.bathy.crop > 0] <- NA
+  wc.bathy.crop[wc.bathy.crop < wc.depth.cutoff] <- NA
+  
+  # make a bounding box for Puget Sound which is hard to crop out (raster of random values)
+  wc.bbox <- st_crop(useez, y=c(xmin=-124, xmax=-121, ymin=46, ymax=49.9)) # crop(useez, extent(-123,-121,46, 49))
+  
+  # crop to extent of EEZ 
+  wc.bathy.mask <- mask(wc.bathy.crop, useez) %>% # KEEP points in the US EEZ
+    mask(mask=countries, inverse=TRUE) %>% # DON'T KEEP points in the coarse country map (bays/estuaries/etc)
+    mask(mask=wc.bbox, inverse=TRUE) %>% # DON'T KEEP points in the extra bounding box for Puget Sound
+    as(., "SpatialPolygonsDataFrame") %>% # make into a polygon (necessary intermediate step)
+    st_as_sf() # make into sf object
+  
+  #plot(wc.bathy.mask)
+    
   st_write(wc.bathy.mask, wc.bathy.file) }else {
     wc.bathy.mask <- st_read(wc.bathy.file)
   }
 
 if(!file.exists(ebs.bathy.file)) {
   
-  ebs.bathy <- get.bathy(lon = ebs_lonrange, lat = ebs_latrange, visualize = F, res = 4)
+  bathy <- "etopo180" # https://coastwatch.pfeg.noaa.gov/erddap/griddap/etopo180.html 
   
-  ebs.bathy.mask <- ebs.bathy %>% 
-    as("SpatialPolygonsDataFrame") %>% 
-    st_as_sf() %>%
-    dplyr::filter(layer <= ebs.depth.cutoff) %>% 
-    st_intersection(st_union(useez)) %>%
-    st_union()
+  ebs.bathy.grid <- griddap(bathy, latitude=ebs_latrange, longitude=ebs_lonrange) 
+  
+  ebs.topo.file <- ebs.bathy.grid$summary$filename
+  
+  ebs.bathy.raster <- raster(ebs.topo.file)
+  
+  ebs.bathy.crop <- ebs.bathy.raster
+  ebs.bathy.crop[ebs.bathy.crop > 0] <- NA
+  ebs.bathy.crop[ebs.bathy.crop < wc.depth.cutoff] <- NA
+  
+  ebs.bathy.mask <- mask(ebs.bathy.crop, useez) %>%  
+    mask(mask=countries, inverse=TRUE) %>%  
+    as(., "SpatialPolygonsDataFrame") %>%  
+    st_as_sf() 
+  
   # plot(ebs.bathy.mask) 
   st_write(ebs.bathy.mask, ebs.bathy.file) }else {
     ebs.bathy.mask <- st_read(ebs.bathy.file)
@@ -171,27 +206,26 @@ if(!file.exists(ebs.bathy.file)) {
 
 if(!file.exists(neus.bathy.file)) {
   
-  neus.bathy <- get.bathy(lon = neus_lonrange, lat = neus_latrange, visualize = F, res = 4) 
+  bathy <- "etopo180" # https://coastwatch.pfeg.noaa.gov/erddap/griddap/etopo180.html 
   
-  neus.bathy.mask <- neus.bathy %>% 
-    as("SpatialPolygonsDataFrame") %>% 
-    st_as_sf() %>%
-    dplyr::filter(layer <= neus.depth.cutoff) %>% 
-    st_intersection(st_union(useez)) %>%
-    st_union()
+  neus.bathy.grid <- griddap(bathy, latitude=neus_latrange, longitude=neus_lonrange) 
+  
+  neus.topo.file <- neus.bathy.grid$summary$filename
+  
+  neus.bathy.raster <- raster(neus.topo.file)
+  
+  neus.bathy.crop <- neus.bathy.raster
+  neus.bathy.crop[neus.bathy.crop > 0] <- NA
+  neus.bathy.crop[neus.bathy.crop < wc.depth.cutoff] <- NA
+  
+  neus.bathy.mask <- mask(neus.bathy.crop, useez) %>%  
+    mask(mask=countries, inverse=TRUE) %>%  
+    as(., "SpatialPolygonsDataFrame") %>%  
+    st_as_sf() 
+  
   st_write(neus.bathy.mask, neus.bathy.file) } else {
     neus.bathy.mask <- st_read(neus.bathy.file)
   }
-
-# get CRS for future reference
-bathy.crs <- st_crs(wc.bathy.mask)
-
-# get shapefile of the US EEZ, reproject to match bathymetry 
-eezs <- st_read(here("raw-data/World_EEZ_v10_20180221","eez_v10.shp")) # download from http://www.marineregions.org/downloads.php and move to raw-data folder
-useez <- eezs %>% 
-  dplyr::filter(Sovereign1 == "United States") %>% 
-  st_transform(crs=bathy.crs) 
-
 
 #####################
 ### crop SST datasets to extent of masks 
