@@ -36,7 +36,6 @@ dat.summary <- dat.models %>%
          quantile=recode(quantile,
                          quantile_0.01="Warm Limit",
                          quantile_0.99="Cold Limit"))
-write_csv(dat.summary, here("results","edge_species.csv"))
 
 dat.models.groups <- dat.models %>%
   select(species, edgetype, region, taxongroup) %>%
@@ -45,122 +44,6 @@ dat.models.groups <- dat.models %>%
          edgetype=as.factor(edgetype),
          region=as.factor(region),
          taxongroup=as.factor(taxongroup))
-
-# prep explanatory variables for models using region-wide change in T 
-
-# neus.sst.summary <- read_rds(here("processed-data","neus_sst_coastdist.rds")) %>% 
-#   rename(lon="x",lat="y") %>%
-#   group_by(year_match, lat, lon) %>%
-#   mutate(cell.annual.sst = mean(sst)) %>% # calculate annual mean of monthly SSTs for each grid cell
-#   ungroup() %>%
-#   group_by(year_match) %>%
-#   mutate(mean.annual.sst = mean(cell.annual.sst)) %>% # calculate annual mean of all grid cells
-#   select(year_match, mean.annual.sst) %>%
-#   distinct() %>%
-#   mutate(region="neus")
-# 
-# wc.sst.summary <- read_rds(here("processed-data","wc_sst_coastdist.rds")) %>% 
-#   rename(lon="x",lat="y") %>%
-#   group_by(year_match, lat, lon) %>%
-#   mutate(cell.annual.sst = mean(sst)) %>% # calculate annual mean of monthly SSTs for each grid cell
-#   ungroup() %>%
-#   group_by(year_match) %>%
-#   mutate(mean.annual.sst = mean(cell.annual.sst)) %>% # calculate annual mean of all grid cells
-#   select(year_match, mean.annual.sst) %>%
-#   distinct() %>%
-#   mutate(region="wc")
-# 
-# ebs.sst.summary <- read_rds(here("processed-data","ebs_sst_rotated.rds")) %>% 
-#   group_by(year_match, lat, lon) %>%
-#   mutate(cell.annual.sst = mean(sst)) %>% # calculate annual mean of monthly SSTs for each grid cell
-#   ungroup() %>%
-#   group_by(year_match) %>%
-#   mutate(mean.annual.sst = mean(cell.annual.sst)) %>% # calculate annual mean of all grid cells
-#   select(year_match, mean.annual.sst) %>%
-#   distinct() %>%
-#   mutate(region="ebs")
-# 
-# dat.sst.summary <- rbind(neus.sst.summary, wc.sst.summary, ebs.sst.summary)
-# 
-# dat.edges.sst.summary <- dat.models %>%
-#   left_join(dat.sst.summary, by=c("region","year"="year_match"))
-
-#######################
-### single-species Bayesian models of edge position ~ regional T or time 
-#######################
-# spp.lms <- dat.edges.sst %>%
-#   filter(axis %in% c('coast_km','NW_km')) %>%
-#   group_by(species, region, quantile, edgetype) %>%
-#   nest() %>%
-#   mutate(
-#     model = purrr::map(data, ~lm(Estimate ~ mean.annual.sst, data = .x)), 
-#     tidymodel = purrr::map(model, tidy)
-#   ) %>% 
-#   unnest(tidymodel) %>% 
-#   select(-data, -model) %>%
-#   filter(!term=="(Intercept)")
-
-# species shifts vs temp 
-# spp.bayes.sst.lm.df <- NULL
-# for(i in unique(dat.edges.sst.summary$species)) {
-#   dfprep1 <- dat.edges.sst.summary[dat.edges.sst.summary$species==i,] # subdivide by species 
-#   for(j in unique(dfprep1$region)) {
-#     dfprep2 <- dat.edges.sst.summary[dat.edges.sst.summary$species==i & dat.edges.sst.summary$region==j,] # subdivide by region, for the few spp found in multiple regions 
-#     for(k in unique(dfprep2$quantile)) {
-#       df <- dat.edges.sst.summary[dat.edges.sst.summary$species==i & dat.edges.sst.summary$region==j & dat.edges.sst.summary$quantile==k,] # subdivide by quantile, for the few spp with both range edges
-#       spp.bayes.lm <- try(stan_glm(Estimate ~ mean.annual.sst, 
-#                                    data=df, 
-#                                    family=gaussian(), 
-#                                    iter = 12000,
-#                                    warmup = 2000,
-#                                    adapt_delta = 0.95,
-#                                    chains = 4,
-#                                    cores = 1,
-#                                    prior = normal(0, 1000),# Burrows paper reports temperature spatial gradients up to 0.02 degrees C / km. taking the inverse, this could range from 50km shift for degree C up to 1000 km or higher. centering on 0 because relationship is not necessarily positive for all species. 
-#                                    weights = 1/(Std.Error^2))) 
-#       if(!class(spp.bayes.lm)[1] == "try-error") { # adding try() here because some edges are so invariant that the model fails 
-#         spp.bayes.lm.tidy <- tidy_draws(spp.bayes.lm) %>%
-#           mutate(species = paste0(i),
-#                  region = paste0(j),
-#                  quantile = paste0(k))
-#         spp.bayes.sst.lm.df <- rbind(spp.bayes.sst.lm.df, spp.bayes.lm.tidy)
-#       }
-#     }
-#   }
-# }
-
-# bayes.lm.sst.edgetype.gg <- spp.bayes.sst.lm.df  %>%
-#   group_by(.draw, quantile, region) %>%
-#   mutate(mean.param = mean(mean.annual.sst) ) %>%
-#   ungroup() %>% 
-#   select(.draw, mean.param, quantile, region) %>%
-#   distinct() %>%
-#   ggplot() +
-#   theme_bw() +
-#   geom_density(aes(x=mean.param, fill=quantile), color="black", alpha=0.5) +
-#   scale_fill_brewer(type="seq", palette="YlGnBu") +
-#   labs(x="Coefficient of Edge vs Temperature (km/C)", y="Density", fill="Range Limit Type") +
-#   theme(legend.position=c(0.2, 0.8)) +
-#   facet_wrap(~region) +
-#   NULL
-# bayes.lm.sst.edgetype.gg
-# ggsave(bayes.lm.sst.edgetype.gg, filename=here("results","edge_coefficients_by_reg.png"), dpi=160, width=8, height=5)
-# 
-# bayes.lm.sst.gg <- spp.bayes.sst.lm.df  %>%
-#   group_by(.draw, quantile) %>%
-#   mutate(mean.param = mean(mean.annual.sst) ) %>%
-#   ungroup() %>% 
-#   select(.draw, mean.param, quantile) %>%
-#   distinct() %>%
-#   ggplot() +
-#   theme_bw() +
-#   geom_density(aes(x=mean.param, fill=quantile), color="black", alpha=0.5) +
-#   scale_fill_brewer(type="seq", palette="YlGnBu") +
-#   labs(x="Coefficient of Edge vs Temperature (km/C)", y="Density", fill="Range Limit Type") +
-#   theme(legend.position=c(0.2, 0.8)) +
-#   NULL
-# bayes.lm.sst.gg
-# ggsave(bayes.lm.sst.gg, filename=here("results","edge_coefficients.png"), dpi=160, width=5, height=5)
 
 # species shifts vs time
 
@@ -494,50 +377,6 @@ spp.bayes.niche.lm.stats %>%
   ggplot() +
   geom_histogram(aes(x=mean))
 
-#######################
-### classify results by niche hypothesis 
-#######################
-
-# identify which hypothesis the posterior beta is consistent with, and write out 
-spp.bayes.niche.groups <- spp.bayes.niche.lm.stats %>%
-  left_join(dat.models.groups %>% select(-edgetype), by=c("region","species")) %>% # add fish/invert column 
-  rowwise() %>%
-  mutate(crosses0 = ifelse(lower<0 & upper>0, TRUE, FALSE)) %>%
-  group_by(region, quantile, species) %>% 
-  mutate(niche.group = ifelse(min(abs(mean)) < 0.01, "good_tracker", # if ONE temp extreme has zero change -> good tracker 
-                              ifelse(TRUE %in% crosses0, "partial_tracker", "non_tracker")) # if ONE temp extreme crosses zero -> lagged tracker 
-  ) %>%
-  select(region, quantile, species, niche.group) %>% 
-  distinct()
-write_csv(spp.bayes.niche.groups, here("results","species_by_thermal_niche_group.csv"))
-
-# calculate stats
-spp.bayes.niche.groups %>% left_join(dat.models.groups) %>% group_by(niche.group) %>% summarise(n=n()) # break down by niche grouping
-spp.bayes.niche.groups %>% left_join(dat.models.groups) %>% group_by(niche.group, taxongroup) %>% summarise(n=n()) # break down by fish/invert and niche grouping
-spp.bayes.niche.groups %>% left_join(dat.models.groups) %>% group_by(region, taxongroup) %>% summarise(n=n()) # by region and fish/invert
-spp.bayes.niche.groups %>% group_by(niche.group, region) %>% summarise(n=n()) # by region and niche grouping
-spp.bayes.niche.groups %>% group_by(niche.group, quantile) %>% summarise(n=n()) # by edge type and niche grouping
-spp.bayes.niche.groups %>% group_by(region, quantile) %>% summarise(n=n()) # by region and edge type
-spp.bayes.niche.groups %>% group_by(region, quantile, niche.group) %>% summarise(n=n()) # by region, niche grouping, and edge type
-
-
-# of the temperature-independent species, which had a significant edge shift over time? 
-spp.tih <- spp.bayes.niche.groups %>%
-  filter(niche.group=="non_tracker") %>%
-  left_join(spp.bayes.edge.lm.df.summary) %>%
-  rowwise() %>%
-  mutate(crosses0 = ifelse(lower<0 & upper>0, TRUE, FALSE)) %>%
-  mutate(signif.shift = ifelse(TRUE %in% crosses0, "N", "Y"))
-
-spp.tnh <- spp.bayes.niche.groups %>%
-  filter(niche.group=="good_tracker") %>%
-  left_join(spp.bayes.edge.lm.df.summary) %>%
-  rowwise() %>%
-  mutate(crosses0 = ifelse(lower<0 & upper>0, TRUE, FALSE)) %>%
-  mutate(signif.shift = ifelse(TRUE %in% crosses0, "N", "Y"),
-         sign.shift = ifelse(mean>0, "positive", "negative")) %>%
-  group_by(signif.shift, sign.shift) %>% 
-  summarise(n=n())
 
 ##########################
 # Figure 1 example plots

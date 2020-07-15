@@ -31,12 +31,14 @@ Scripts should be run in the following order:
 
 1. `get_neus_data.R` imports Northeast data (the only dataset requiring manual download) and reformats it to match those downloaded with [FishData](https://github.com/James-Thorson/FishData)
 1. `get_neus_wc_coastlines.R` creates a coastal distance axis for use with VAST for those two regions
-1. `get_range_limits.R` uses VAST to calculate range edges for all three regions. It runs in parallel (don't forget to update the number of cores based on your machine!) but even so may take several days for all species and regions. Note that the output data frames are also in the repository
-1. `validate_range_limits.R` filters the VAST output for only range limits that actually fall in the study region, based on passing certain filters. This needs to be re-run every time VAST is re-run in `get_range_limits.R` 
+1. `get_range_edges.R` uses VAST to calculate range edges for all three regions. It runs in parallel (don't forget to update the number of cores based on your machine!) but even so may take several days for all species and regions. Note that the output data frames are also in the repository
+1. `validate_range_edges.R` filters the VAST output for only range limits that actually fall in the study region, based on passing certain filters. This needs to be re-run every time VAST is re-run in `get_range_limits.R` 
 1. `get_taxonomy.R` fetches higher taxonomy of study species from [WORMS](http://marinespecies.org/aphia.php?p=search) using [taxize](https://github.com/ropensci/taxize/)
 1. `prep_sst.R` fetches historical SST data from the [NOAA ERDDAP server](https://coastwatch.pfeg.noaa.gov/erddap/index.html) for each region, crops rasters to the extent of a bathymetric mask for each region that is also created in this script, performs a mean bias correction to combine different SST datasets, and writes the SST data out as dataframes
-1. `match_sst_to_axis.R` matches SST values to points along the axis of range limit measurement for each study region, and combines SST datasets where necessary. This doesn't need to be re-run if new edges are generated, because it takes as input the VAST coordinates, not the range edge positions.  
-1. `analyze_range_limits.R` executes all models to analyze range edges. 
+1. `match_sst_to_axis.R` matches SST values to points along the axis of range limit measurement for each study region, and combines SST datasets where necessary. This doesn't need to be re-run if new edges are generated, because it takes as input the VAST coordinates, not the range edge positions.
+1. `calculate_edge_thermal_niches.R` fits Bayesian models to range edges and edge thermal niches.
+1. `analyze_range_edges.R` conducts the main analyses in the paper. 
 1. `paper_stats.R` calculates miscellaneous statistical results reported in the manuscript. 
-1. Code to generate figures in the manuscript and supplementary materials can be found in the `figure-scripts` folder. An exception is Figure 1, which requires the full output from the Bayesian models, which is quite large; those figures are generated at the end of `analyze_range_limits.R`. 
+
+Code to generate figures in the manuscript and supplementary materials can be found in the `figure-scripts` folder. An exception is Figure 1, which requires the full output from the Bayesian models, which is quite large; those figures are generated at the end of `analyze_range_limits.R`. 
 a
