@@ -19,8 +19,9 @@ library(tidybayes)
 
 # DON'T FORGET TO RE-RUN VALIDATE_EDGE_SPP AFTER RE-RUNNING VAST!
 dat.models <- readRDS(here("processed-data","all_edge_spp_df.rds")) %>%
-  filter(axis %in% c('coast_km','NW_km')) %>%
-  ungroup()
+  ungroup() %>% # undo rowwise nature
+  mutate(axis = as.character(axis)) %>% # convert from factor
+  filter(axis %in% c('coast_km','NW_km')) 
 
 # how many species?
 
@@ -90,6 +91,8 @@ spp.bayes.edge.filter <- spp.bayes.edge.lm.df %>%
   filter(max.rhat <= 1.1) # get rid of spp*region*edge combos where one of the edge ~ time models didn't converge--just a check--may not get rid of any 
 
 setdiff(spp.bayes.edge.lm.df %>% select(region, species, quantile) %>% distinct(), spp.bayes.edge.filter %>% select(region, species, quantile) %>% distinct()) # 0 at present, all models converged
+
+rm(spp.bayes.edge.filter) # if they all converged this is the same as spp.bayes.edge.lm.df
 
 # plot posteriors 
 # bayes.lm.time.gg <- spp.bayes.edge.lm.df  %>%
