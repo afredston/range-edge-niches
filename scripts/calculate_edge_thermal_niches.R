@@ -46,7 +46,9 @@ dat.models.groups <- dat.models %>%
          region=as.factor(region),
          taxongroup=as.factor(taxongroup))
 
-# species shifts vs time
+#######################
+### species shifts vs time
+#######################
 
 spp.bayes.edge.lm.df <- NULL
 for(i in unique(dat.models$species)) {
@@ -385,10 +387,21 @@ spp.bayes.niche.lm.stats %>%
 # Figure 1 example plots
 ##########################
 
+# while most plots are generated in figure-scripts, these require the full STAN output to generate posteriors 
+
 # make example plots for methods schematic 
-ex.spp1 <- "chionoecetes bairdi" # tanner crab; good tracker, cold edge, EBS
-ex.spp2 <- "hippoglossus hippoglossus" # atlantic halibut; non tracker, warm edge, NEUS
-ex.spp3 <- "ophiodon elongatus" # petrale sole; partial tracker, warm edge, WC
+ex.spp1 <- "chionoecetes bairdi" # tanner crab 
+ex.spp2 <- "gadus morhua" # atlantic cod
+ex.spp3 <- "sebastes pinniger" # canary rockfish
+
+summary.spp1 <- spp.bayes.niche.lm.stats %>% 
+  filter(species==ex.spp1)
+
+summary.spp2 <- spp.bayes.niche.lm.stats %>% 
+  filter(species==ex.spp2)
+
+summary.spp3 <- spp.bayes.niche.lm.stats %>% 
+  filter(species==ex.spp3)
 
 # if species are updated, be sure to change year limits in the time-series figures below 
 
@@ -402,6 +415,9 @@ ex.spp.bayes.gg1 <- spp.bayes.niche.filter %>%
   ggplot() +
   theme_bw() +
   geom_density(aes(x=mean.param, fill=predicted.var), color="black", alpha=0.5) +
+  geom_vline(aes(xintercept=0), color="black", linetype="dotted") + 
+  geom_segment(aes(x=summary.spp1[summary.spp1$predicted.var=="predict.sstmax",]$lower, xend=summary.spp1[summary.spp1$predicted.var=="predict.sstmax",]$upper, y=-1, yend=-1), color="#DF2301", lwd=2) + # add 90% credible interval 
+  geom_segment(aes(x=summary.spp1[summary.spp1$predicted.var=="predict.sstmin",]$lower, xend=summary.spp1[summary.spp1$predicted.var=="predict.sstmin",]$upper, y=0, yend=0), color="#3A4ED0", lwd=2) +
   scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
   labs(x="Posterior Distribution of Coefficient (°C/year)",y="Density", fill=NULL) +
   theme(legend.position="bottom") +
@@ -418,7 +434,9 @@ ex.spp.bayes.gg2 <- spp.bayes.niche.filter %>%
   ggplot() +
   theme_bw() +
   geom_density(aes(x=mean.param, fill=predicted.var), color="black", alpha=0.5) +
-  scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+  geom_vline(aes(xintercept=0), color="black", linetype="dotted") + 
+  geom_segment(aes(x=summary.spp2[summary.spp2$predicted.var=="predict.sstmax",]$lower, xend=summary.spp2[summary.spp2$predicted.var=="predict.sstmax",]$upper, y=-1, yend=-1), color="#DF2301", lwd=2) + # add 90% credible interval 
+  geom_segment(aes(x=summary.spp2[summary.spp2$predicted.var=="predict.sstmin",]$lower, xend=summary.spp2[summary.spp2$predicted.var=="predict.sstmin",]$upper, y=0, yend=0), color="#3A4ED0", lwd=2) +scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
   labs(x="Posterior Distribution of Coefficient (°C/year)",y="Density", fill=NULL) +
   theme(legend.position="bottom") +
   NULL
@@ -434,7 +452,9 @@ ex.spp.bayes.gg3 <- spp.bayes.niche.filter %>%
   ggplot() +
   theme_bw() +
   geom_density(aes(x=mean.param, fill=predicted.var), color="black", alpha=0.5) +
-  scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+  geom_vline(aes(xintercept=0), color="black", linetype="dotted") + 
+  geom_segment(aes(x=summary.spp3[summary.spp3$predicted.var=="predict.sstmax",]$lower, xend=summary.spp3[summary.spp3$predicted.var=="predict.sstmax",]$upper, y=-1, yend=-1), color="#DF2301", lwd=2) + # add 90% credible interval 
+  geom_segment(aes(x=summary.spp3[summary.spp3$predicted.var=="predict.sstmin",]$lower, xend=summary.spp3[summary.spp3$predicted.var=="predict.sstmin",]$upper, y=0, yend=0), color="#3A4ED0", lwd=2) +scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
   labs(x="Posterior Distribution of Coefficient (°C/year)",y="Density", fill=NULL) +
   theme(legend.position="bottom") +
   NULL
