@@ -29,6 +29,8 @@ neus.bbox2 <- st_set_crs(st_as_sf(as(raster::extent(-78, -74, 42, 45), "SpatialP
 neusmap <- usamap %>% 
   st_intersection(neus.bbox1) %>%  
   st_difference(neus.bbox2) # gets rid of extra non coastal line 
+st_write(neusmap%>% 
+           smoothr::smooth(method="ksmooth", smoothness=8), here("processed-data","neus_smoothed_coastline.shp"))
 
 neus.smoothgeom <- neusmap %>% 
   smoothr::smooth(method="ksmooth", smoothness=8) %>% # smoother was applied incrementally more until the Chesapeake went away 
@@ -57,6 +59,9 @@ wcmap <- usamap %>%
   st_intersection(wc.bbox1) %>%
   st_difference(wc.bbox2) %>% # crop out Puget Sound
   st_difference(wc.bbox3)
+st_write(wcmap%>% 
+           smoothr::smooth(method="ksmooth", smoothness=1), 
+         here("processed-data","wc_smoothed_coastline.shp"))
 
 wc.smoothgeom <- wcmap %>% 
   smoothr::smooth(method="ksmooth", smoothness=1)  %>% 
@@ -67,42 +72,3 @@ wc.geomdists <- pointDistance(wc.smoothgeom[-nrow(wc.smoothgeom), c("x", "y")], 
 wc.coastdistdat <- data.frame(wc.smoothgeom[, c('x','y')], seglength=c(0, wc.geomdists))
 wc.coastdistdat$lengthfromhere <- cumsum(rev(wc.coastdistdat[,"seglength"]))
 saveRDS(wc.coastdistdat, here("processed-data","wc_coastdistdat.rds"))
-
-# make plots of each region's smoothing for Supplement
-
-usoutline <- rnaturalearth::ne_states("united states of america", returnclass = "sf") %>% 
-  st_sf()
-
-# just need one plot for WC
-wc.smoothmap <- ggplot() +
-  geom_sf(data=usoutline, color="#999999") +
-  geom_sf(data=wcmap %>% 
-            smoothr::smooth(method="ksmooth", smoothness=1), color="darkblue", lwd=2) + 
-  scale_x_continuous(limits=c(wc.xmin, wc.xmax)) +
-  scale_y_continuous(limits=c(wc.ymin, wc.ymax)) +
-  theme_bw() +
-  labs(title="Smoothness=1") +
-  theme(axis.text.x=element_text(angle=45))
-wc.smoothmap
-
-# iterate over NEUS smoothness values that we used 
-neus_smoothplot <- function(smoothval){
-  out <- ggplot() +
-    geom_sf(data=usoutline, color="#999999") +
-    geom_sf(data=neusmap %>% 
-              smoothr::smooth(method="ksmooth", smoothness=smoothval), color="darkblue", lwd=1.5) + 
-    scale_x_continuous(limits=c(neus.xmin, neus.xmax)) +
-    scale_y_continuous(limits=c(neus.ymin, neus.ymax)) +
-    theme_bw() +
-    labs(title=paste0("Smoothness=", smoothval)) +
-    theme(axis.text.x=element_text(angle=45)) 
-}
-
-neus.smoothmap.list <- lapply(seq(1, 8, 1), neus_smoothplot)
-
-neus.smoothmap <- do.call("grid.arrange", c(neus.smoothmap.list, ncol=3))
-
-ggsave(neus.smoothmap, dpi=160, height=7, width=7, file=here("results","smoothing_map_neus.png"))
-
-ggsave(wc.smoothmap, dpi=160, height=7, width=3, filename=here("results","smoothing_map_wc.png"))
-#rm(list=ls())

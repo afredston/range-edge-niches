@@ -122,10 +122,14 @@ ggsave(neusgg, filename=here("results","neus_sst_inset_plot.png"), height=2, wid
 ggsave(wcgg, filename=here("results","wc_sst_inset_plot.png"), height=2, width=2,dpi=160)
 ggsave(ebsgg, filename=here("results","ebs_sst_inset_plot.png"), height=2,width=2, dpi=160)
 
-# make inset maps of each region 
-neus_bathy <- readRDS(here("processed-data","neus_bathy_300m.rds"))
-ebs_bathy <- readRDS(here("processed-data","ebs_bathy_300m.rds"))
-wc_bathy <- readRDS(here("processed-data","wc_bathy_600m.rds"))
+# make maps of each region using the bathymetric masks generated in prep_sst.R 
+
+neus_bathy <- st_read(here("processed-data","neus_bathy_mask.shp"))
+wc_bathy <- st_read(here("processed-data","wc_bathy_mask.shp"))
+ebs_bathy <- st_read(here("processed-data","ebs_bathy_mask.shp"))
+neus_coast <- st_read(here("processed-data","neus_smoothed_coastline.shp"))
+wc_coast <- st_read(here("processed-data","wc_smoothed_coastline.shp"))
+
 usoutline <- rnaturalearth::ne_states("united states of america", returnclass = "sf") %>% 
   st_sf()
 
@@ -140,6 +144,7 @@ ebs_lonrange <- c(-179.5, -154)
 neusmap <- ggplot() + 
   geom_sf(data=neus_bathy, color="skyblue3") +
   geom_sf(data=usoutline, color="#999999") +
+  geom_sf(data=neus_coast, color="black", linetype="dashed", lwd=1.5) +
   scale_x_continuous(limits = neus_lonrange, expand = c(0, 0)) +
   scale_y_continuous(limits = neus_latrange, expand = c(0, 0)) +
   theme_bw() +
@@ -150,10 +155,12 @@ neusmap <- ggplot() +
         axis.title=element_blank(),
         plot.margin=margin(t = 5, r = 0, b = 15, l = 5, unit = "pt")) +
   NULL
+neusmap
 
 wcmap <- ggplot() + 
   geom_sf(data=wc_bathy, color="skyblue3") +
   geom_sf(data=usoutline, color="#999999") +
+  geom_sf(data=wc_coast, color="black", linetype="dashed", lwd=1.5) +
   scale_x_continuous(limits = wc_lonrange, expand = c(0, 0)) +
   scale_y_continuous(limits = wc_latrange, expand = c(0, 0)) +
   theme_bw() +
@@ -169,6 +176,7 @@ wcmap <- ggplot() +
 ebsmap <- ggplot() + 
   geom_sf(data=ebs_bathy, color="skyblue3") +
   geom_sf(data=usoutline, color="#999999") +
+  geom_segment(aes(x=-158, xend=-170, y=54, yend=66),color="black", linetype="dashed", lwd=1.5) + 
   scale_x_continuous(limits = ebs_lonrange, expand = c(0, 0)) +
   scale_y_continuous(limits = ebs_latrange, expand = c(0, 0)) +
   theme_bw() +
@@ -179,7 +187,8 @@ ebsmap <- ggplot() +
         axis.title=element_blank(),
         plot.margin=margin(t = 5, r = 0, b = 15, l = 5, unit = "pt")) +
   NULL
+ebsmap
 
-ggsave(neusmap, filename=here("results","neusmap.png"), height=4, dpi=160)
-ggsave(wcmap, filename=here("results","wcmap.png"), height=4, dpi=160)
-ggsave(ebsmap, filename=here("results","ebsmap.png"), height=4, dpi=160)
+ggsave(neusmap, filename=here("results","region_map_neus.png"), height=4, dpi=160)
+ggsave(wcmap, filename=here("results","region_map_wc.png"), height=4, dpi=160)
+ggsave(ebsmap, filename=here("results","region_map_ebs.png"), height=4, dpi=160)

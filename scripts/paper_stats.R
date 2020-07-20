@@ -99,3 +99,4 @@ lm_max_sst <- bind_rows(neus_sst_summary, wc_sst_summary, ebs_sst_summary) %>%
   unnest(tidymodel) %>%
   select(-data, -model) 
 lm_max_sst # significant increase in NEUS, EBS
+

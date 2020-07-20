@@ -52,7 +52,7 @@ wc.cold.niche.time.gg <- dat.predict.niche %>%
   theme(legend.position="bottom",
         axis.text.x = element_text(angle = 90))+
   scale_x_continuous(limits=c(1976, 2018), breaks=seq(1976, 2018, 4))+ 
-  facet_wrap(~species, ncol=5) +
+  facet_wrap(~species, ncol=3) +
   NULL
 wc.cold.niche.time.gg
 
@@ -109,11 +109,11 @@ ebs.warm.niche.time.gg <- dat.predict.niche %>%
 ebs.warm.niche.time.gg
 
 
-ggsave(neus.cold.niche.time.gg, filename=here("results","neus_cold_edge_niche_shifts_v_time.png"), height=10, width=5, dpi=160, scale=1.2)
-ggsave(neus.warm.niche.time.gg, filename=here("results","neus_warm_edge_niche_shifts_v_time.png"), height=10, width=5, dpi=160, scale=1.2)
+ggsave(neus.cold.niche.time.gg, filename=here("results","neus_cold_edge_niche_shifts_v_time.png"), height=10.5,width=8.25, dpi=160, scale=1.2)
+ggsave(neus.warm.niche.time.gg, filename=here("results","neus_warm_edge_niche_shifts_v_time.png"), height=10.5,width=8.25,dpi=160, scale=1.2)
 
-ggsave(wc.cold.niche.time.gg, filename=here("results","wc_cold_edge_niche_shifts_v_time.png"), height=10, width=5, dpi=160, scale=1.2)
-ggsave(wc.warm.niche.time.gg, filename=here("results","wc_warm_edge_niche_shifts_v_time.png"), height=10, width=5, dpi=160, scale=1.2)
+ggsave(wc.cold.niche.time.gg, filename=here("results","wc_cold_edge_niche_shifts_v_time.png"), height=10.5,width=8.25,dpi=160, scale=1.2)
+ggsave(wc.warm.niche.time.gg, filename=here("results","wc_warm_edge_niche_shifts_v_time.png"), height=10.5,width=8.25, dpi=160, scale=1.2)
 
-ggsave(ebs.cold.niche.time.gg, filename=here("results","ebs_cold_edge_niche_shifts_v_time.png"), height=10, width=5, dpi=160, scale=1.2)
-ggsave(ebs.warm.niche.time.gg, filename=here("results","ebs_warm_edge_niche_shifts_v_time.png"), height=10, width=5, dpi=160, scale=1.2)
+ggsave(ebs.cold.niche.time.gg, filename=here("results","ebs_cold_edge_niche_shifts_v_time.png"), height=10.5,width=8.25,dpi=160, scale=1.2)
+ggsave(ebs.warm.niche.time.gg, filename=here("results","ebs_warm_edge_niche_shifts_v_time.png"), height=10.5,width=8.25, dpi=160, scale=1.2)

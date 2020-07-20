@@ -1,18 +1,18 @@
 # Realized thermal niche tracking at range limits of North American marine species
 
-### A. Fredston-Hermann, M. Pinsky, B. Selden, C. Szuwalski, J. T. Thorson, S. D. Gaines, B. S. Halpern 
+### A. Fredston, M. Pinsky, B. Selden, C. Szuwalski, J. T. Thorson, S. D. Gaines, B. S. Halpern 
 
-To reference the data or methods here, please cite the manuscript. Contact A. Fredston-Hermann with questions at fredston@rutgers.edu. 
+To reference the data or methods here, please cite the manuscript. Contact A. Fredston with questions at fredston@rutgers.edu. 
 
 ## Overview 
 
 This repository contains code to:
 
 * Estimate the annual position of range limits from NOAA trawl survey data using [VAST](https://github.com/James-Thorson-NOAA/VAST) 
-* Use hindcast SST datasets to reconstruct the extreme temperatures found at species' range limits each year 
-* Conduct statistical analyses of range limit shifts and edge thermal niche shifts over time 
+* Use hindcast SST datasets to reconstruct the extreme temperatures found at species' range edges each year 
+* Conduct statistical analyses of range edge shifts and edge thermal niche shifts over time 
 
-To fully reproduce the analysis, users will need to install VAST. 
+To fully reproduce the analysis, users will need to install VAST. However, this repository contains outputs from VAST and subsequent statistical analyses for users who just want to examine the results or reproduce figures. 
 
 The repository is organized as follows:
 
@@ -40,5 +40,21 @@ Scripts should be run in the following order:
 1. `analyze_range_edges.R` conducts the main analyses in the paper. 
 1. `paper_stats.R` calculates miscellaneous statistical results reported in the manuscript. 
 
-Code to generate figures in the manuscript and supplementary materials can be found in the `figure-scripts` folder. An exception is Figure 1, which requires the full output from the Bayesian models, which is quite large; those figures are generated at the end of `analyze_range_limits.R`. 
-a
+Code to generate figures in the manuscript and supplementary materials can be found in the `figure-scripts` folder. An exception is Figure 1, which requires the full output from the Bayesian models, which is quite large; those figures are generated at the end of `calculate_edge_thermal_niches.R`. 
+
+## Computational requirements 
+
+Analyses were conducted in R 3.6.0 on a machine with the following specifications: 
+Windows Server 2019
+2-Intel 6154 Xeon    3.0Ghz 18cores(36 threads)each
+512 GB memory
+6TB- SSD storage
+18TB- HDD storage
+NVIDIA P4000 8Gb
+10Gb ethernet
+
+On this machine, the VAST models (`get_range_edges.R`) for all regions were run in parallel on 18 cores overnight. Bayesian models in `calculate_edge_thermal_niches.R` are not currently scripted to run in parallel; on this machine, each set of models takes several hours to run. The Bayesian models, especially the second set fitting edge thermal niche change over time, are highly memory-intensive and may crash systems with low memory capacity. 
+
+## Use, problems, and feedback
+
+If you encounter any errors or problems, please create an Issue here. Likewise, please consider starting an Issue for any questions so that others can view conversations about the analysis and code. Again, don't hesitate to contact the lead author, A. Fredston, at fredston@rutgers.edu. 
