@@ -74,6 +74,7 @@ buccinum polare,Gastropoda,Buccinidae,Buccinum,Neogastropoda,Mollusca,Buccinum p
 buccinum scalariforme,Gastropoda,Buccinidae,Buccinum,Neogastropoda,Mollusca,Buccinum scalariforme,Eastern Bering Sea
 chionoecetes bairdi,Malacostraca,Oregoniidae,Chionoecetes,Decapoda,Arthropoda,Chionoecetes bairdi,Eastern Bering Sea
 chionoecetes opilio,Malacostraca,Oregoniidae,Chionoecetes,Decapoda,Arthropoda,Chionoecetes opilio,Eastern Bering Sea
+chrysaora melanaster,Scyphozoa,Pelagiidae,Chrysaora,Semaeostomeae,Cnidaria,Chrysaora melanaster,Eastern Bering Sea
 clinopegma magnum,Gastropoda,Buccinidae,Clinopegma,Neogastropoda,Mollusca,Clinopegma magnum,Eastern Bering Sea
 clupea pallasii,Actinopterygii,Clupeidae,Clupea,Clupeiformes,Chordata,Clupea pallasii,Eastern Bering Sea
 ctenodiscus crispatus,Asteroidea,Ctenodiscidae,Ctenodiscus,Paxillosida,Echinodermata,Ctenodiscus crispatus,Eastern Bering Sea
@@ -84,6 +85,7 @@ eunoe nodosa,Polychaeta,Polynoidae,Eunoe,Phyllodocida,Annelida,Eunoe nodosa,East
 fusitriton oregonensis,Gastropoda,Cymatiidae,Fusitriton,Littorinimorpha,Mollusca,Fusitriton oregonensis,Eastern Bering Sea
 gadus chalcogrammus,Actinopterygii,Gadidae,Gadus,Gadiformes,Chordata,Gadus chalcogrammus,Eastern Bering Sea
 gadus macrocephalus,Actinopterygii,Gadidae,Gadus,Gadiformes,Chordata,Gadus macrocephalus,Eastern Bering Sea
+glyptocephalus zachirus,Actinopterygii,Pleuronectidae,Glyptocephalus,Pleuronectiformes,Chordata,Glyptocephalus zachirus,Eastern Bering Sea
 gorgonocephalus eucnemis,Ophiuroidea,Gorgonocephalidae,Gorgonocephalus,Euryalida,Echinodermata,Gorgonocephalus eucnemis,Eastern Bering Sea
 hemilepidotus jordani,Actinopterygii,Cottidae,Hemilepidotus,Scorpaeniformes,Chordata,Hemilepidotus jordani,Eastern Bering Sea
 hemilepidotus papilio,Actinopterygii,Cottidae,Hemilepidotus,Scorpaeniformes,Chordata,Hemilepidotus papilio,Eastern Bering Sea
@@ -132,6 +134,7 @@ paralithodes platypus,Malacostraca,Lithodidae,Paralithodes,Decapoda,Arthropoda,P
 platichthys stellatus,Actinopterygii,Pleuronectidae,Platichthys,Pleuronectiformes,Chordata,Platichthys stellatus,Eastern Bering Sea
 pleuronectes quadrituberculatus,Actinopterygii,Pleuronectidae,Pleuronectes,Pleuronectiformes,Chordata,Pleuronectes quadrituberculatus,Eastern Bering Sea
 plicifusus kroyeri,Gastropoda,Buccinidae,Plicifusus,Neogastropoda,Mollusca,Plicifusus kroyeri,Eastern Bering Sea
+podothecus accipenserinus,Actinopterygii,Agonidae,Podothecus,Scorpaeniformes,Chordata,Podothecus accipenserinus,Eastern Bering Sea
 pteraster obscurus,Asteroidea,Pterasteridae,Pteraster,Velatida,Echinodermata,Pteraster obscurus,Eastern Bering Sea
 reinhardtius hippoglossoides,Actinopterygii,Pleuronectidae,Reinhardtius,Pleuronectiformes,Chordata,Reinhardtius hippoglossoides,Eastern Bering Sea
 strongylocentrotus droebachiensis,Echinoidea,Strongylocentrotidae,Strongylocentrotus,Camarodonta,Echinodermata,Strongylocentrotus droebachiensis,Eastern Bering Sea

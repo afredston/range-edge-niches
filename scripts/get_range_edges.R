@@ -1,4 +1,5 @@
 # fit single-species models and get range limits in all study regions using VAST 
+# at present, this will not reproduce the results if you just hit "run". for some reason, the model fitting (in "rebuild and run model") when run in parallel sometimes fails to fit a species in each attempt, but if you go through and manually run the calls to fit_model(), one will converge without error. It's not clear why this error is arising. to work around it, run the model for one region; generate the list of spp_not_converged at the bottom; and then manually run each of those again, which will get those to converge. 
 
 ########################
 ### load packages, functions 
@@ -10,6 +11,7 @@ library(TMB)
 library(FishData)
 Version = get_latest_version( package="VAST" )
 source(paste0(getwd(),'/functions/get_range_edge.R'))
+source(paste0(getwd(),'/functions/get_density.R'))
 library(doParallel)
 library(foreach)
 
@@ -152,9 +154,24 @@ for(i in 1:length(Regions)){
     # separate for EBS which doesn't use coastal distance
     
   } else if (!file.exists(Z_gmFile) & reg=="ebs"){
-    print(paste0(Z_gmFile, " does not exist"))} else {
-      Z_gm <- readRDS(Z_gmFile) 
-      Z_gm_axes = colnames(Z_gm)
+      # load in axis distance data
+      axisdistdat <- readRDS(paste0(getwd(),'/processed-data/',reg,'_axisdistdat.rds'))
+      
+      # function to get coastal length of lat/lon coords
+      get_length <- function(lon, lat, distdf) {
+        tmp <- distdf %>%
+          mutate(abs.diff.x2 = abs(x-lon)^2,
+                 abs.diff.y2 = abs(y-lat)^2,
+                 abs.diff.xy = sqrt(abs.diff.x2 + abs.diff.y2
+                 )) %>%
+          filter(abs.diff.xy == min(abs.diff.xy)) %>%
+          dplyr::select(lengthfromhere) %>%
+          pull()
+        return(tmp)
+      }
+  } else {
+      Z_gm <- readRDS(Z_gmFile) # CHECK THE ORDER OF THIS PROCESS
+      Z_gm_axes <- colnames(Z_gm)
     }
   
   ########################
@@ -162,9 +179,9 @@ for(i in 1:length(Regions)){
   ########################
   
   detectCores()
-  registerDoParallel(18)
+  registerDoParallel(36) # UPDATE FOR YOUR OWN MACHINE
   
-     foreach(j = spp_not_converged) %dopar%{
+     foreach(j = Species_list) %dopar%{
     library(VAST)
     library(TMB)
     
@@ -254,19 +271,31 @@ for(i in 1:length(Regions)){
     
     # different approach to coordinate conversion for EBS, which uses a rotated NW axis not coastal distance
     if (!file.exists(Z_gmFile) & reg=="ebs"){
+      
       Z_gm = fit$spatial_list$loc_g
-      rotation_radians = pi/4 # 45 degree rotation 
-      Z_gm = cbind( Z_gm, "NE_km"=cos(rotation_radians)*Z_gm[,'E_km']+sin(rotation_radians)*Z_gm[,'N_km'] )
-      Z_gm = cbind( Z_gm, "NW_km"=-sin(rotation_radians)*Z_gm[,"E_km"]+cos(rotation_radians)*Z_gm[,'N_km'])
-      Z_gm_axes = colnames(Z_gm)
-      saveRDS(Z_gm, Z_gmFile)} else {
-        print(paste0(Z_gmFile, " already exists"))
+      tmpUTM = cbind('PID'=1,'POS'=1:nrow(Z_gm),'X'=Z_gm[,'E_km'],'Y'=Z_gm[,'N_km'])
+      attr(tmpUTM,"projection") = "UTM"
+      attr(tmpUTM,"zone") = 2  # DANGER!! THIS SHOULD BE fit$extrapolation_list$zone - ifelse( fit$extrapolation_list$flip_around_dateline==TRUE, 30, 0 ) BUT IT RESULTS IN A NEGATIVE NUMBER SO I'M OVERWRITING IT HERE
+      latlon_g = PBSmapping::convUL(tmpUTM)                                                         #$
+      latlon_g = cbind( 'Lat'=latlon_g[,"Y"], 'Lon'=latlon_g[,"X"])
+      latlon_g <- as.data.frame(latlon_g)
+      
+      line_km=NULL
+      for(k in 1:nrow(latlon_g)){
+        out = get_length(lon=latlon_g$Lon[k], lat=latlon_g$Lat[k], distdf = axisdistdat)/1000 
+        line_km <- c(line_km, out)
       }
+      Z_gm = cbind( Z_gm, "line_km"=line_km )
+      Z_gm_axes = colnames(Z_gm)
+      saveRDS(Z_gm, Z_gmFile)
+    } else {
+      print(paste0(Z_gmFile, " already exists"))
+    }
     
     # write out coordinate conversion df if it doesn't exist already 
     
     refdfFile <- paste0(getwd(),'/processed-data/',reg,'_coords_conversion.rds')
-    if(!file.exists(refdfFile) & reg %in% c('neus','wc')) {
+    if(!file.exists(refdfFile)) {
       Z_gm1 = Z_gm
       # revert to lat/lon using code from FishStatsUtils
       tmpUTM = cbind('PID'=1,'POS'=1:nrow(Z_gm1),'X'=Z_gm1[,'E_km'],'Y'=Z_gm1[,'N_km'])
@@ -276,20 +305,6 @@ for(i in 1:length(Regions)){
       latlon_g = cbind( 'Lat'=latlon_g[,"Y"], 'Lon'=latlon_g[,"X"])
       latlon_g <- as.data.frame(latlon_g)
       refdf <- cbind(Z_gm1, latlon_g) 
-      saveRDS(refdf,refdfFile)
-    }
-    if(!file.exists(refdfFile) & reg=="ebs") {
-      Z_gm1 = fit$spatial_list$loc_g
-      rotation_radians = pi/4 # 45 degree rotation 
-      Z_gm1 = cbind( Z_gm1, "NE_km"=cos(rotation_radians)*Z_gm1[,'E_km']+sin(rotation_radians)*Z_gm1[,'N_km'] )
-      Z_gm1 = cbind( Z_gm1, "NW_km"=-sin(rotation_radians)*Z_gm1[,"E_km"]+cos(rotation_radians)*Z_gm1[,'N_km'])
-      tmpUTM = cbind('PID'=1,'POS'=1:nrow(Z_gm1),'X'=Z_gm1[,'E_km'],'Y'=Z_gm1[,'N_km'])
-      attr(tmpUTM,"projection") = "UTM"
-      attr(tmpUTM,"zone") = fit$extrapolation_list$zone - ifelse( fit$extrapolation_list$flip_around_dateline==TRUE, 30, 0 )
-      latlon_g = PBSmapping::convUL(tmpUTM)                                                         #$
-      latlon_g = cbind( 'Lat'=latlon_g[,"Y"], 'Lon'=latlon_g[,"X"])
-      latlon_g <- as.data.frame(latlon_g)
-      refdf <- cbind(Z_gm1, latlon_g)
       saveRDS(refdf,refdfFile)
     }
     
@@ -334,7 +349,8 @@ for(i in 1:length(Regions)){
                   getsd=TRUE,
                   newtonsteps=1
         ))
-                                                                                                           fit$parameter_estimates$adjustments_for_convergence <- "none"
+      
+      if(!class(fit)=="try-error"){fit$parameter_estimates$adjustments_for_convergence <- "none"}
       
       
       # check that all maximum gradients have an absolute value below 0.01 and the model didn't throw an error 
@@ -357,7 +373,8 @@ for(i in 1:length(Regions)){
                     newtonsteps=1,
                     parameters=fit0$ParHat
           ))
-        fit$parameter_estimates$adjustments_for_convergence <- "used fit0 parameters"
+        
+        if(!class(fit)=="try-error"){fit$parameter_estimates$adjustments_for_convergence <- "used fit0 parameters"}
         
         }
       
@@ -401,11 +418,11 @@ for(i in 1:length(Regions)){
                     Use_REML=TRUE,
                     Z_gm = Z_gm,
                     getsd=TRUE,
-                    newtonsteps=1,
-                    parameters=fit0$ParHat
+                    newtonsteps=1
                     
           ))
-        fit$parameter_estimates$adjustments_for_convergence <- "changed RhoConfig"
+        if(!class(fit)=="try-error"){fit$parameter_estimates$adjustments_for_convergence <- "changed RhoConfig"}
+        
       }
     }
     
@@ -503,7 +520,6 @@ for(i in 1:length(Regions)){
                     Z_gm = Z_gm,
                     getsd=TRUE,
                     newtonsteps=1,
-                    parameters=fit0$ParHat,
                     Q_ik=Q_ik
                     
           ))
@@ -545,6 +561,11 @@ for(i in 1:length(Regions)){
                         "Z_gm_axes"=Z_gm_axes,
                         "calculate_relative_to_average" = TRUE)
       )
+      
+      out_density <- try(
+        get_density(fit.model=fit,
+                    Years2Include=Years2Include)
+      )
     }
     
     if(!class(out_absolute)=='try-error'){
@@ -555,11 +576,19 @@ for(i in 1:length(Regions)){
       out_relative$species <- paste0(j) 
       write.csv(out_relative, file.path(paste0(RegionFile,j,"_relative_SE_edges.csv")))}
     
+    # if(!class(out_density)=='try-error'){
+    #   out_density$species <- paste0(j) 
+    #   write.csv(out_density, file.path(paste0(RegionFile,j,"_density.csv")))}        
+    # not saving this right now because each df for each species is ~1M rows, but keeping the code so anyone running line-by-line can easily access the density df
+
+    
   }
      
      ########################
      ###  save outputs
      ########################
+     
+     # not making a collated df for density because they're individually huge 
      
   rel_edge_files <- list.files(path=RegionFile, pattern="relative_SE_edges.csv", full.names=TRUE)
   rel_edge_df <- dplyr::bind_rows(lapply(rel_edge_files, read.csv))

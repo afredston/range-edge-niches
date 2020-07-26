@@ -23,7 +23,7 @@ get_axes <- function(lon, lat, axesdf) {
            abs.diff.xy = sqrt(abs.diff.x2 + abs.diff.y2
            )) %>% 
     filter(abs.diff.xy == min(abs.diff.xy)) %>% 
-    dplyr::select(vastLon, vastLat, E_km, N_km, NE_km, NW_km) 
+    dplyr::select(vastLon, vastLat, E_km, N_km, line_km) 
   return(tmp)
 }
 

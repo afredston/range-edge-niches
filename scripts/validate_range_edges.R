@@ -49,8 +49,8 @@ wc.df <- wc.vast %>%
   rename("Std.Error"=`Std. Error`) 
 
 # get bounds of each region
-ebs.maxnw <- max(ebs.df[ebs.df$axis=="NW_km",]$Estimate)
-ebs.minnw <- min(ebs.df[ebs.df$axis=="NW_km",]$Estimate)
+ebs.maxnw <- max(ebs.df[ebs.df$axis=="line_km",]$Estimate)
+ebs.minnw <- min(ebs.df[ebs.df$axis=="line_km",]$Estimate)
 
 ebs.axislen = ebs.maxnw-ebs.minnw
 ebs.buffer = ebs.axislen*buffer_amount
@@ -69,7 +69,7 @@ wc.buffer = wc.axislen*buffer_amount
 
 # identify range edge species along relevant axis 
 ebs.nw.edges <- ebs.df %>%
-  filter(axis=="NW_km",
+  filter(axis=="line_km",
          quantile%in%c("quantile_0.99","quantile_0.01")) %>%
   group_by(species, quantile) %>%
   mutate(meanedge = mean(Estimate)) %>%
@@ -162,7 +162,7 @@ wc.prep <- wc.df %>%
 
 dat <- rbind(wc.prep, neus.prep, ebs.prep) %>%
   left_join(spp.taxonomy, by=c("species"="query")) %>%
-  mutate(taxongroup = ifelse(Class %in% c("Actinopterygii","Elasmobranchii"),"fish","invertebrates"))
+  mutate(taxongroup = ifelse(Class %in% c("Actinopterygii","Elasmobranchii"),"fish","invertebrates")) 
 
 # try Wald test (Jim's idea)
 # need to expand all combinations of years 

@@ -21,7 +21,7 @@ library(tidybayes)
 dat.models <- readRDS(here("processed-data","all_edge_spp_df.rds")) %>%
   ungroup() %>% # undo rowwise nature
   mutate(axis = as.character(axis)) %>% # convert from factor
-  filter(axis %in% c('coast_km','NW_km')) 
+  filter(axis %in% c('coast_km','line_km')) 
 
 # how many species?
 
@@ -199,12 +199,12 @@ wc.sst <- readRDS(here("processed-data","wc_sst_coastdist.rds"))
 neus.sst <- readRDS(here("processed-data","neus_sst_coastdist.rds"))
 
 ebs.sst.prepgam <- ebs.sst %>% 
-  group_by(NW_km, year_match) %>%
+  group_by(line_km, year_match) %>%
   mutate(sstmean = mean(sst),
          sstmax = max(sst),
          sstmin = min(sst)) %>%
   ungroup() %>%
-  dplyr::select(year_match, NW_km, sstmean, sstmax, sstmin) %>%
+  dplyr::select(year_match, line_km, sstmean, sstmax, sstmin) %>%
   distinct() %>%
   mutate(year_match = as.factor(year_match)) 
 
@@ -230,9 +230,9 @@ neus.sst.prepgam <- neus.sst %>%
 
 # set up GAMs for coastal and NW axes 
 # note that the 99, 01 names aren't really appropriate anymore now that we are using monthly means
-ebs.sst.temp.gam.mean <- gam(sstmean ~ year_match + s(NW_km, by=year_match), data=ebs.sst.prepgam)
-ebs.sst.temp.gam.99 <- gam(sstmax ~ year_match + s(NW_km, by=year_match), data=ebs.sst.prepgam)
-ebs.sst.temp.gam.01 <- gam(sstmin ~ year_match + s(NW_km, by=year_match), data=ebs.sst.prepgam)
+ebs.sst.temp.gam.mean <- gam(sstmean ~ year_match + s(line_km, by=year_match), data=ebs.sst.prepgam)
+ebs.sst.temp.gam.99 <- gam(sstmax ~ year_match + s(line_km, by=year_match), data=ebs.sst.prepgam)
+ebs.sst.temp.gam.01 <- gam(sstmin ~ year_match + s(line_km, by=year_match), data=ebs.sst.prepgam)
 
 wc.sst.temp.gam.mean <- gam(sstmean ~ year_match + s(coast_km, by=year_match), data=wc.sst.prepgam)
 wc.sst.temp.gam.99 <- gam(sstmax ~ year_match + s(coast_km, by=year_match), data=wc.sst.prepgam)
@@ -247,7 +247,7 @@ neus.sst.temp.gam.01 <- gam(sstmin ~ year_match + s(coast_km, by=year_match), da
 ebs.pred <- dat.models %>%
   filter(region=="ebs") %>%
   dplyr::select( -axis) %>%
-  rename(NW_km=Estimate,
+  rename(line_km=Estimate,
          year_match=year) 
 
 wc.pred <- dat.models %>%
@@ -290,8 +290,8 @@ neus.pred$axis <- "coast_km"
 wc.pred <- rename(wc.pred, edge_position=coast_km)
 wc.pred$axis <- "coast_km"
 
-ebs.pred <- rename(ebs.pred, edge_position=NW_km)
-ebs.pred$axis <- "NW_km"
+ebs.pred <- rename(ebs.pred, edge_position=line_km)
+ebs.pred$axis <- "line_km"
 
 # tidy columns and combine
 dat.predict1 <- rbind(neus.pred, wc.pred, ebs.pred)%>%
@@ -483,7 +483,8 @@ ex.spp.time.gg2 <- dat.predict.niche %>%
   scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
   theme_bw() +
   labs(x="Year",y="Sea Surface Temperature at Edge (°C)", color=NULL) +
-  theme(legend.position="bottom")+
+  theme(legend.position="bottom",
+        axis.text.x=element_text(angle=45))+
   scale_x_continuous(limits=c(1968, 2018), breaks=seq(1968, 2018, 4))+
   NULL
 ex.spp.time.gg2
@@ -502,9 +503,9 @@ ex.spp.time.gg3 <- dat.predict.niche %>%
   NULL
 ex.spp.time.gg3
 
-ggsave(ex.spp.bayes.gg1, dpi=160, width=4, height=4, filename=here("results","example_1_posterior.png"))
-ggsave(ex.spp.bayes.gg2, dpi=160, width=4, height=4, filename=here("results","example_2_posterior.png"))
-ggsave(ex.spp.bayes.gg3, dpi=160, width=4, height=4, filename=here("results","example_3_posterior.png"))
-ggsave(ex.spp.time.gg1, dpi=160, width=4, height=4, filename=here("results","example_1_niche.png"))
-ggsave(ex.spp.time.gg2, dpi=160, width=4, height=4, filename=here("results","example_2_niche.png"))
-ggsave(ex.spp.time.gg3, dpi=160, width=4, height=4, filename=here("results","example_3_niche.png"))
+ggsave(ex.spp.bayes.gg1, dpi=160, width=4, height=4, filename=here("results",paste0("example_posterior_",ex.spp1, ".png")))
+ggsave(ex.spp.bayes.gg2, dpi=160, width=4, height=4, filename=here("results",paste0("example_posterior_",ex.spp2,".png")))
+ggsave(ex.spp.bayes.gg3, dpi=160, width=4, height=4, filename=here("results",paste0("example_posterior_",ex.spp3,".png")))
+ggsave(ex.spp.time.gg1, dpi=160, width=4, height=4, filename=here("results",paste0("example_niche_",ex.spp1,".png")))
+ggsave(ex.spp.time.gg2, dpi=160, width=4, height=4, filename=here("results",paste0("example_niche_",ex.spp2,".png")))
+ggsave(ex.spp.time.gg3, dpi=160, width=4, height=4, filename=here("results",paste0("example_niche_",ex.spp3,".png")))
