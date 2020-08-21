@@ -8,7 +8,7 @@ To reference the data or methods here, please cite the manuscript. Contact A. Fr
 
 This repository contains code to:
 
-* Estimate the annual position of range limits from NOAA trawl survey data using [VAST](https://github.com/James-Thorson-NOAA/VAST) 
+* Estimate the annual position of range edges from NOAA trawl survey data using [VAST](https://github.com/James-Thorson-NOAA/VAST) 
 * Use hindcast SST datasets to reconstruct the extreme temperatures found at species' range edges each year 
 * Conduct statistical analyses of range edge shifts and edge thermal niche shifts over time 
 
@@ -30,9 +30,9 @@ There are some additional directories for model outputs that are not version con
 Scripts should be run in the following order:
 
 1. `get_neus_data.R` imports Northeast data (the only dataset requiring manual download) and reformats it to match those downloaded with [FishData](https://github.com/James-Thorson/FishData)
-1. `get_neus_wc_coastlines.R` creates a coastal distance axis for use with VAST for those two regions
+1. `get_axes_of_measurement.R` creates a coastal distance axis for use with VAST for those two regions
 1. `get_range_edges.R` uses VAST to calculate range edges for all three regions. It runs in parallel (don't forget to update the number of cores based on your machine!) but even so may take several days for all species and regions. Note that the output data frames are also in the repository
-1. `validate_range_edges.R` filters the VAST output for only range limits that actually fall in the study region, based on passing certain filters. This needs to be re-run every time VAST is re-run in `get_range_limits.R` 
+1. `validate_range_edges.R` filters the VAST output for only range edges that actually fall in the study region, based on passing certain filters. This needs to be re-run every time VAST is re-run in `get_range_edges.R` 
 1. `get_taxonomy.R` fetches higher taxonomy of study species from [WORMS](http://marinespecies.org/aphia.php?p=search) using [taxize](https://github.com/ropensci/taxize/)
 1. `prep_sst.R` fetches historical SST data from the [NOAA ERDDAP server](https://coastwatch.pfeg.noaa.gov/erddap/index.html) for each region, crops rasters to the extent of a bathymetric mask for each region that is also created in this script, performs a mean bias correction to combine different SST datasets, and writes the SST data out as dataframes
 1. `match_sst_to_axis.R` matches SST values to points along the axis of range limit measurement for each study region, and combines SST datasets where necessary. This doesn't need to be re-run if new edges are generated, because it takes as input the VAST coordinates, not the range edge positions.
