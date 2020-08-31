@@ -140,7 +140,7 @@ ebs_lonrange <- c(-179.5, -154)
 
 ebs.linemap <- ggplot() + 
   geom_sf(data=usoutline, color="#999999") +
-  geom_sf(data=ebsline %>% st_set_crs(st_crs(usoutline))) +
+  geom_sf(data=ebs.line %>% st_set_crs(st_crs(usoutline))) +
   scale_x_continuous(limits=ebs_lonrange) +
   scale_y_continuous(limits=ebs_latrange) +
   theme_bw() +
