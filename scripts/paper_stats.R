@@ -4,6 +4,33 @@ library(purrr)
 library(broom)
 
 #################
+# axis length 
+#################
+neus.coastdistdat <- readRDS(here("processed-data","neus_coastdistdat.rds"))
+wc.coastdistdat <- readRDS(here("processed-data","wc_coastdistdat.rds"))
+ebs.axisdistdat <- readRDS(here("processed-data","ebs_axisdistdat.rds"))
+
+neus.len <- (max(neus.coastdistdat$lengthfromhere)-min(neus.coastdistdat$lengthfromhere))/1000 # subtract largest distance from smallest distance (need the latter because origin is not at exactly zero); change from m to km
+wc.len <- (max(wc.coastdistdat$lengthfromhere)-min(wc.coastdistdat$lengthfromhere))/1000 
+ebs.len <- (max(ebs.axisdistdat$lengthfromhere)-min(ebs.axisdistdat$lengthfromhere))/1000
+
+#################
+# range edge filters 
+#################
+# all species with models fitted by VAST: 
+
+
+dat.models <- readRDS(here("processed-data","all_edge_spp_df.rds")) # just using this name to be consistent with the rest of the scripts 
+
+#################
+# summary of study spp (for appendix)
+#################
+
+study_spp <- readRDS(here("processed-data","all_edge_spp_df.rds")) %>%
+  select(region, species, edgetype, Class) %>%
+  distinct()
+
+#################
 # change in temperature over time
 #################
 

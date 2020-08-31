@@ -192,7 +192,7 @@ if(!file.exists(ebs.bathy.file)) {
   
   ebs.bathy.crop <- ebs.bathy.raster
   ebs.bathy.crop[ebs.bathy.crop > 0] <- NA
-  ebs.bathy.crop[ebs.bathy.crop < wc.depth.cutoff] <- NA
+  ebs.bathy.crop[ebs.bathy.crop < ebs.depth.cutoff] <- NA
   
   ebs.bathy.mask <- mask(ebs.bathy.crop, useez) %>%  
     mask(mask=countries, inverse=TRUE) %>%  

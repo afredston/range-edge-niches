@@ -1,4 +1,4 @@
-# this script uses maps of the US to generate a smoothed coastline for NEUS, WC
+# this script uses maps of the US to generate a smoothed coastline for NEUS, WC, and a Middle Domain axis for EBS 
 # in each case, a smoother function was applied incrementally until unwanted coastal features (bays, estuaries, etc.) vanished from the smoothed coastline
 
 # https://cran.r-project.org/web/packages/smoothr/vignettes/smoothr.html
