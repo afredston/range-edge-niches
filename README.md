@@ -40,7 +40,10 @@ Scripts should be run in the following order:
 1. `analyze_range_edges.R` conducts the main analyses in the paper. 
 1. `paper_stats.R` calculates miscellaneous statistical results reported in the manuscript. 
 
-Code to generate figures in the manuscript and supplementary materials can be found in the `figure-scripts` folder. An exception is Figure 1, which requires the full output from the Bayesian models, which is quite large; those figures are generated at the end of `calculate_edge_thermal_niches.R`. 
+Code to generate figures in the manuscript and supplementary materials can typically be found in the `figure-scripts` folder. A few exceptions: 
+
+* Figure 1 requires the full output from the Bayesian models, which is quite large; those figures are generated at the end of `calculate_edge_thermal_niches.R`. 
+* The figures in Appendix 2 showing how the axes of measurement were developed are generated in `get_axes_of_measurement.R`
 
 ## Computational requirements 
 

@@ -10,7 +10,7 @@ library(here)
 dat.models <- readRDS(here("processed-data","all_edge_spp_df.rds")) %>%
   ungroup() %>% # undo rowwise nature
   mutate(axis = as.character(axis)) %>% # convert from factor
-  filter(axis %in% c('coast_km','NW_km')) 
+  filter(axis %in% c('coast_km','line_km')) 
 
 dat.summary <- dat.models %>% 
   group_by(species, quantile, region) %>%
