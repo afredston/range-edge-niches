@@ -15,6 +15,8 @@ chaceon quinquedens,Malacostraca,Geryonidae,Chaceon,Decapoda,Arthropoda,Chaceon 
 citharichthys arctifrons,Actinopterygii,Paralichthyidae,Citharichthys,Pleuronectiformes,Chordata,Citharichthys arctifrons,Northeast
 clupea harengus,Actinopterygii,Clupeidae,Clupea,Clupeiformes,Chordata,Clupea harengus,Northeast
 conger oceanicus,Actinopterygii,Congridae,Conger,Anguilliformes,Chordata,Conger oceanicus,Northeast
+cryptacanthodes maculatus,Actinopterygii,Cryptacanthodidae,Cryptacanthodes,Perciformes,Chordata,Cryptacanthodes maculatus,Northeast
+cyclopterus lumpus,Actinopterygii,Cyclopteridae,Cyclopterus,Scorpaeniformes,Chordata,Cyclopterus lumpus,Northeast
 cynoscion regalis,Actinopterygii,Sciaenidae,Cynoscion,Perciformes,Chordata,Cynoscion regalis,Northeast
 dipturus laevis,Elasmobranchii,Rajidae,Dipturus,Rajiformes,Chordata,Dipturus laevis,Northeast
 enchelyopus cimbrius,Actinopterygii,Lotidae,Enchelyopus,Gadiformes,Chordata,Enchelyopus cimbrius,Northeast
@@ -26,6 +28,7 @@ hippoglossoides platessoides,Actinopterygii,Pleuronectidae,Hippoglossoides,Pleur
 hippoglossus hippoglossus,Actinopterygii,Pleuronectidae,Hippoglossus,Pleuronectiformes,Chordata,Hippoglossus hippoglossus,Northeast
 homarus americanus,Malacostraca,Nephropidae,Homarus,Decapoda,Arthropoda,Homarus americanus,Northeast
 illex illecebrosus,Cephalopoda,Ommastrephidae,Illex,Oegopsida,Mollusca,Illex illecebrosus,Northeast
+leiostomus xanthurus,Actinopterygii,Sciaenidae,Leiostomus,Perciformes,Chordata,Leiostomus xanthurus,Northeast
 lepophidium profundorum,Actinopterygii,Ophidiidae,Lepophidium,Ophidiiformes,Chordata,Lepophidium profundorum,Northeast
 leucoraja erinacea,Elasmobranchii,Rajidae,Leucoraja,Rajiformes,Chordata,Leucoraja erinacea,Northeast
 leucoraja ocellata,Elasmobranchii,Rajidae,Leucoraja,Rajiformes,Chordata,Leucoraja ocellata,Northeast
@@ -38,23 +41,28 @@ menidia menidia,Actinopterygii,Atherinopsidae,Menidia,Atheriniformes,Chordata,Me
 menticirrhus saxatilis,Actinopterygii,Sciaenidae,Menticirrhus,Perciformes,Chordata,Menticirrhus saxatilis,Northeast
 merluccius albidus,Actinopterygii,Merlucciidae,Merluccius,Gadiformes,Chordata,Merluccius albidus,Northeast
 merluccius bilinearis,Actinopterygii,Merlucciidae,Merluccius,Gadiformes,Chordata,Merluccius bilinearis,Northeast
+micropogonias undulatus,Actinopterygii,Sciaenidae,Micropogonias,Perciformes,Chordata,Micropogonias undulatus,Northeast
 morone saxatilis,Actinopterygii,Moronidae,Morone,Perciformes,Chordata,Morone saxatilis,Northeast
+mustelus canis,Elasmobranchii,Triakidae,Mustelus,Carcharhiniformes,Chordata,Mustelus canis,Northeast
 myoxocephalus octodecemspinosus,Actinopterygii,Cottidae,Myoxocephalus,Scorpaeniformes,Chordata,Myoxocephalus octodecemspinosus,Northeast
 myxine glutinosa,Myxini,Myxinidae,Myxine,Myxiniformes,Chordata,Myxine glutinosa,Northeast
 ophidion marginatum,Actinopterygii,Ophidiidae,Ophidion,Ophidiiformes,Chordata,Ophidion marginatum,Northeast
 paralichthys dentatus,Actinopterygii,Paralichthyidae,Paralichthys,Pleuronectiformes,Chordata,Paralichthys dentatus,Northeast
 paralichthys oblongus,Actinopterygii,Paralichthyidae,Paralichthys,Pleuronectiformes,Chordata,Paralichthys oblongus,Northeast
 peprilus triacanthus,Actinopterygii,Stromateidae,Peprilus,Perciformes,Chordata,Peprilus triacanthus,Northeast
-phycis chesteri,Actinopterygii,Phycidae,Phycis,Gadiformes,Chordata,Phycis chesteri,Northeast
+peristedion miniatum,Actinopterygii,Peristediidae,Peristedion,Scorpaeniformes,Chordata,Peristedion miniatum,Northeast
 placopecten magellanicus,Bivalvia,Pectinidae,Placopecten,Pectinida,Mollusca,Placopecten magellanicus,Northeast
 pollachius virens,Actinopterygii,Gadidae,Pollachius,Gadiformes,Chordata,Pollachius virens,Northeast
 pomatomus saltatrix,Actinopterygii,Pomatomidae,Pomatomus,Perciformes,Chordata,Pomatomus saltatrix,Northeast
 prionotus carolinus,Actinopterygii,Triglidae,Prionotus,Scorpaeniformes,Chordata,Prionotus carolinus,Northeast
+prionotus evolans,Actinopterygii,Triglidae,Prionotus,Scorpaeniformes,Chordata,Prionotus evolans,Northeast
 raja eglanteria,Elasmobranchii,Rajidae,Raja,Rajiformes,Chordata,Raja eglanteria,Northeast
-scomber scombrus,Actinopterygii,Scombridae,Scomber,Perciformes,Chordata,Scomber scombrus,Northeast
 scophthalmus aquosus,Actinopterygii,Scophthalmidae,Scophthalmus,Pleuronectiformes,Chordata,Scophthalmus aquosus,Northeast
 scyliorhinus retifer,Elasmobranchii,Scyliorhinidae,Scyliorhinus,Carcharhiniformes,Chordata,Scyliorhinus retifer,Northeast
 sebastes fasciatus,Actinopterygii,Sebastidae,Sebastes,Scorpaeniformes,Chordata,Sebastes fasciatus,Northeast
+squalus acanthias,Elasmobranchii,Squalidae,Squalus,Squaliformes,Chordata,Squalus acanthias,Northeast
+squatina dumeril,Elasmobranchii,Squatinidae,Squatina,Squatiniformes,Chordata,Squatina dumeril,Northeast
+stenotomus chrysops,Actinopterygii,Sparidae,Stenotomus,Perciformes,Chordata,Stenotomus chrysops,Northeast
 tautogolabrus adspersus,Actinopterygii,Labridae,Tautogolabrus,Perciformes,Chordata,Tautogolabrus adspersus,Northeast
 urophycis chuss,Actinopterygii,Phycidae,Urophycis,Gadiformes,Chordata,Urophycis chuss,Northeast
 urophycis regia,Actinopterygii,Phycidae,Urophycis,Gadiformes,Chordata,Urophycis regia,Northeast
@@ -83,7 +91,6 @@ erimacrus isenbeckii,Malacostraca,Cheiragonidae,Erimacrus,Decapoda,Arthropoda,Er
 eunoe depressa,Polychaeta,Polynoidae,Eunoe,Phyllodocida,Annelida,Eunoe depressa,Eastern Bering Sea
 eunoe nodosa,Polychaeta,Polynoidae,Eunoe,Phyllodocida,Annelida,Eunoe nodosa,Eastern Bering Sea
 fusitriton oregonensis,Gastropoda,Cymatiidae,Fusitriton,Littorinimorpha,Mollusca,Fusitriton oregonensis,Eastern Bering Sea
-gadus chalcogrammus,Actinopterygii,Gadidae,Gadus,Gadiformes,Chordata,Gadus chalcogrammus,Eastern Bering Sea
 gadus macrocephalus,Actinopterygii,Gadidae,Gadus,Gadiformes,Chordata,Gadus macrocephalus,Eastern Bering Sea
 glyptocephalus zachirus,Actinopterygii,Pleuronectidae,Glyptocephalus,Pleuronectiformes,Chordata,Glyptocephalus zachirus,Eastern Bering Sea
 gorgonocephalus eucnemis,Ophiuroidea,Gorgonocephalidae,Gorgonocephalus,Euryalida,Echinodermata,Gorgonocephalus eucnemis,Eastern Bering Sea
@@ -126,7 +133,6 @@ pagurus capillatus,Malacostraca,Paguridae,Pagurus,Decapoda,Arthropoda,Pagurus ca
 pagurus confragosus,Malacostraca,Paguridae,Pagurus,Decapoda,Arthropoda,Pagurus confragosus,Eastern Bering Sea
 pagurus ochotensis,Malacostraca,Paguridae,Pagurus,Decapoda,Arthropoda,Pagurus ochotensis,Eastern Bering Sea
 pagurus rathbuni,Malacostraca,Paguridae,Pagurus,Decapoda,Arthropoda,Pagurus rathbuni,Eastern Bering Sea
-pagurus trigonocheirus,Malacostraca,Paguridae,Pagurus,Decapoda,Arthropoda,Pagurus trigonocheirus,Eastern Bering Sea
 pandalus eous,Malacostraca,Pandalidae,Pandalus,Decapoda,Arthropoda,Pandalus eous,Eastern Bering Sea
 pandalus goniurus,Malacostraca,Pandalidae,Pandalus,Decapoda,Arthropoda,Pandalus goniurus,Eastern Bering Sea
 paralithodes camtschaticus,Malacostraca,Lithodidae,Paralithodes,Decapoda,Arthropoda,Paralithodes camtschaticus,Eastern Bering Sea
@@ -149,8 +155,12 @@ bathyraja interrupta,Elasmobranchii,Arhynchobatidae,Bathyraja,Rajiformes,Chordat
 brisaster latifrons,Echinoidea,Schizasteridae,Brisaster,Spatangoida,Echinodermata,Brisaster latifrons,West Coast
 careproctus melanurus,Actinopterygii,Liparidae,Careproctus,Scorpaeniformes,Chordata,Careproctus melanurus,West Coast
 citharichthys sordidus,Actinopterygii,Paralichthyidae,Citharichthys,Pleuronectiformes,Chordata,Citharichthys sordidus,West Coast
+clupea pallasii,Actinopterygii,Clupeidae,Clupea,Clupeiformes,Chordata,Clupea pallasii,West Coast
 eopsetta jordani,Actinopterygii,Pleuronectidae,Eopsetta,Pleuronectiformes,Chordata,Eopsetta jordani,West Coast
+glyptocephalus zachirus,Actinopterygii,Pleuronectidae,Glyptocephalus,Pleuronectiformes,Chordata,Glyptocephalus zachirus,West Coast
 hippoglossoides elassodon,Actinopterygii,Pleuronectidae,Hippoglossoides,Pleuronectiformes,Chordata,Hippoglossoides elassodon,West Coast
+hippoglossus stenolepis,Actinopterygii,Pleuronectidae,Hippoglossus,Pleuronectiformes,Chordata,Hippoglossus stenolepis,West Coast
+hydrolagus colliei,Holocephali,Chimaeridae,Hydrolagus,Chimaeriformes,Chordata,Hydrolagus colliei,West Coast
 icelinus filamentosus,Actinopterygii,Cottidae,Icelinus,Scorpaeniformes,Chordata,Icelinus filamentosus,West Coast
 liponema brevicornis,Anthozoa,Liponematidae,Liponema,Actiniaria,Cnidaria,Liponema brevicornis,West Coast
 loligo opalescens,Cephalopoda,Loliginidae,Loligo,Myopsida,Mollusca,Loligo opalescens,West Coast
@@ -162,10 +172,12 @@ lyopsetta exilis,Actinopterygii,Pleuronectidae,Lyopsetta,Pleuronectiformes,Chord
 merluccius productus,Actinopterygii,Merlucciidae,Merluccius,Gadiformes,Chordata,Merluccius productus,West Coast
 metacarcinus magister,Malacostraca,Cancridae,Metacarcinus,Decapoda,Arthropoda,Metacarcinus magister,West Coast
 metridium farcimen,Anthozoa,Metridiidae,Metridium,Actiniaria,Cnidaria,Metridium farcimen,West Coast
+microstomus pacificus,Actinopterygii,Pleuronectidae,Microstomus,Pleuronectiformes,Chordata,Microstomus pacificus,West Coast
 ophiodon elongatus,Actinopterygii,Hexagrammidae,Ophiodon,Scorpaeniformes,Chordata,Ophiodon elongatus,West Coast
 pandalus jordani,Malacostraca,Pandalidae,Pandalus,Decapoda,Arthropoda,Pandalus jordani,West Coast
 paractinostola faeculenta,Anthozoa,Actinostolidae,Paractinostola,Actiniaria,Cnidaria,Paractinostola faeculenta,West Coast
 parastichopus leukothele,Holothuroidea,Stichopodidae,Parastichopus,Synallactida,Echinodermata,Parastichopus leukothele,West Coast
+parophrys vetulus,Actinopterygii,Pleuronectidae,Parophrys,Pleuronectiformes,Chordata,Parophrys vetulus,West Coast
 pasiphaea pacifica,Malacostraca,Pasiphaeidae,Pasiphaea,Decapoda,Arthropoda,Pasiphaea pacifica,West Coast
 pleuronichthys decurrens,Actinopterygii,Pleuronectidae,Pleuronichthys,Pleuronectiformes,Chordata,Pleuronichthys decurrens,West Coast
 porichthys notatus,Actinopterygii,Batrachoididae,Porichthys,Batrachoidiformes,Chordata,Porichthys notatus,West Coast
@@ -181,6 +193,8 @@ sebastes elongatus,Actinopterygii,Sebastidae,Sebastes,Scorpaeniformes,Chordata,S
 sebastes goodei,Actinopterygii,Sebastidae,Sebastes,Scorpaeniformes,Chordata,Sebastes goodei,West Coast
 sebastes jordani,Actinopterygii,Sebastidae,Sebastes,Scorpaeniformes,Chordata,Sebastes jordani,West Coast
 sebastes pinniger,Actinopterygii,Sebastidae,Sebastes,Scorpaeniformes,Chordata,Sebastes pinniger,West Coast
+sebastes saxicola,Actinopterygii,Sebastidae,Sebastes,Scorpaeniformes,Chordata,Sebastes saxicola,West Coast
+sebastes semicinctus,Actinopterygii,Sebastidae,Sebastes,Scorpaeniformes,Chordata,Sebastes semicinctus,West Coast
 sebastolobus alascanus,Actinopterygii,Sebastidae,Sebastolobus,Scorpaeniformes,Chordata,Sebastolobus alascanus,West Coast
 squalus suckleyi,Elasmobranchii,Squalidae,Squalus,Squaliformes,Chordata,Squalus suckleyi,West Coast
 strongylocentrotus fragilis,Echinoidea,Strongylocentrotidae,Strongylocentrotus,Camarodonta,Echinodermata,Strongylocentrotus fragilis,West Coast

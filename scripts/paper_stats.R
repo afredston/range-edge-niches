@@ -23,9 +23,39 @@ ebs.len <- (max(ebs.axisdistdat$lengthfromhere)-min(ebs.axisdistdat$lengthfromhe
 dat.models <- readRDS(here("processed-data","all_edge_spp_df.rds")) # just using this name to be consistent with the rest of the scripts 
 
 #################
-# summary of study spp (for appendix)
+# summary of study species
 #################
 
+# how many species converged in VAST? 
+vast.spp <- read_csv(here("processed-data","spp_taxonomy.csv"))
+
+# breakdown by region
+vast.spp %>% group_by(region) %>% summarise(n=n())
+
+# how many found in >1 region? 
+vast.spp %>% group_by(query) %>% summarise(n=n()) %>% filter(n>1) 
+
+# how many actually had range edges?
+dat.summary <- readRDS(here("processed-data","all_edge_spp_df.rds")) %>%
+  ungroup() %>% # undo rowwise nature
+  mutate(axis = as.character(axis)) %>% # convert from factor
+  filter(axis %in% c('coast_km','line_km'))  %>%
+  group_by(species, quantile, region) %>%
+  summarise() %>% 
+  ungroup() %>%
+  mutate(species=str_to_sentence(species),
+         region=recode(region,
+                       ebs="Eastern Bering Sea",
+                       neus="Northeast",
+                       wc="West Coast"),
+         quantile=recode(quantile,
+                         quantile_0.01="Warm Limit",
+                         quantile_0.99="Cold Limit"))
+
+# break down by region (and compare to same test above to see how many spp were eliminated for not having edges)
+dat.summary %>% group_by(region) %>% summarise(n=n())
+
+# for appendix
 study_spp <- readRDS(here("processed-data","all_edge_spp_df.rds")) %>%
   select(region, species, edgetype, Class) %>%
   distinct()

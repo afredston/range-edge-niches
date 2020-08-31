@@ -1,5 +1,4 @@
 # fit single-species models and get range limits in all study regions using VAST 
-# at present, this will not reproduce the results if you just hit "run". for some reason, the model fitting (in "rebuild and run model") when run in parallel sometimes fails to fit a species in each attempt, but if you go through and manually run the calls to fit_model(), one will converge without error. It's not clear why this error is arising. to work around it, run the model for one region; generate the list of spp_not_converged at the bottom; and then manually run each of those again, which will get those to converge. 
 
 ########################
 ### load packages, functions 
@@ -154,34 +153,31 @@ for(i in 1:length(Regions)){
     # separate for EBS which doesn't use coastal distance
     
   } else if (!file.exists(Z_gmFile) & reg=="ebs"){
-      # load in axis distance data
-      axisdistdat <- readRDS(paste0(getwd(),'/processed-data/',reg,'_axisdistdat.rds'))
-      
-      # function to get coastal length of lat/lon coords
-      get_length <- function(lon, lat, distdf) {
-        tmp <- distdf %>%
-          mutate(abs.diff.x2 = abs(x-lon)^2,
-                 abs.diff.y2 = abs(y-lat)^2,
-                 abs.diff.xy = sqrt(abs.diff.x2 + abs.diff.y2
-                 )) %>%
-          filter(abs.diff.xy == min(abs.diff.xy)) %>%
-          dplyr::select(lengthfromhere) %>%
-          pull()
-        return(tmp)
-      }
-  } else {
-      Z_gm <- readRDS(Z_gmFile) # CHECK THE ORDER OF THIS PROCESS
-      Z_gm_axes <- colnames(Z_gm)
+    # load in axis distance data
+    axisdistdat <- readRDS(paste0(getwd(),'/processed-data/',reg,'_axisdistdat.rds'))
+    
+    # function to get coastal length of lat/lon coords
+    get_length <- function(lon, lat, distdf) {
+      tmp <- distdf %>%
+        mutate(abs.diff.x2 = abs(x-lon)^2,
+               abs.diff.y2 = abs(y-lat)^2,
+               abs.diff.xy = sqrt(abs.diff.x2 + abs.diff.y2
+               )) %>%
+        filter(abs.diff.xy == min(abs.diff.xy)) %>%
+        dplyr::select(lengthfromhere) %>%
+        pull()
+      return(tmp)
     }
+  } 
   
   ########################
   ###  start single-species models in parallel
   ########################
   
   detectCores()
-  registerDoParallel(36) # UPDATE FOR YOUR OWN MACHINE
+  registerDoParallel(18) # UPDATE FOR YOUR OWN MACHINE
   
-     foreach(j = Species_list) %dopar%{
+  foreach(j = Species_list) %dopar%{
     library(VAST)
     library(TMB)
     
@@ -265,13 +261,15 @@ for(i in 1:length(Regions)){
       Z_gm = cbind( Z_gm, "coast_km"=coast_km )
       Z_gm_axes = colnames(Z_gm)
       saveRDS(Z_gm, Z_gmFile)
-    } else {
+    } else if (reg %in% c('neus','wc')) {
+      Z_gm = readRDS(Z_gmFile)
+      Z_gm_axes <- colnames(Z_gm)
       print(paste0(Z_gmFile, " already exists"))
     }
     
     # different approach to coordinate conversion for EBS, which uses a rotated NW axis not coastal distance
     if (!file.exists(Z_gmFile) & reg=="ebs"){
-      
+      library(tidyverse)
       Z_gm = fit$spatial_list$loc_g
       tmpUTM = cbind('PID'=1,'POS'=1:nrow(Z_gm),'X'=Z_gm[,'E_km'],'Y'=Z_gm[,'N_km'])
       attr(tmpUTM,"projection") = "UTM"
@@ -288,7 +286,9 @@ for(i in 1:length(Regions)){
       Z_gm = cbind( Z_gm, "line_km"=line_km )
       Z_gm_axes = colnames(Z_gm)
       saveRDS(Z_gm, Z_gmFile)
-    } else {
+    } else if (reg=="ebs") {
+      Z_gm = readRDS(Z_gmFile)
+      Z_gm_axes <- colnames(Z_gm)
       print(paste0(Z_gmFile, " already exists"))
     }
     
@@ -376,7 +376,7 @@ for(i in 1:length(Regions)){
         
         if(!class(fit)=="try-error"){fit$parameter_estimates$adjustments_for_convergence <- "used fit0 parameters"}
         
-        }
+      }
       
       
       # check that all maximum gradients have an absolute value below 0.01 and the model didn't throw an error 
@@ -386,17 +386,19 @@ for(i in 1:length(Regions)){
         # attempt 3: if fit still failed / didn't converge, it could be because L_beta1_cf or L_beta2_ct is approaching zero; use a different RhoConfig 
         
         # if it's a model, but didn't converge... 
-        if(!class(fit)=="try-error"){
-          if(abs(fit$parameter_estimates$par["L_beta1_cf"]) < 0.001) {
-          newRhoConfig = c("Beta1"=3, "Beta2"=4, "Epsilon1"=4, "Epsilon2"=4)
+        if(!class(fit)=="try-error") {
+          if("L_beta1_cf" %in% fit$parameter_estimates$diagnostics$Param & "L_beta2_ct" %in% fit$parameter_estimates$diagnostics$Param){ # AND if these parameters exist in the model... 
+            if(abs(fit$parameter_estimates$par["L_beta1_cf"]) < 0.001) {
+              newRhoConfig = c("Beta1"=3, "Beta2"=4, "Epsilon1"=4, "Epsilon2"=4)
+            }
+            if(abs(fit$parameter_estimates$par["L_beta2_ct"]) < 0.001) {
+              newRhoConfig = c("Beta1"=4, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
+            }
+            if(abs(fit$parameter_estimates$par["L_beta1_cf"]) < 0.001 & 
+               abs(fit$parameter_estimates$par["L_beta2_ct"]) < 0.001) {
+              newRhoConfig = c("Beta1"=3, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
+            }}
         }
-        if(abs(fit$parameter_estimates$par["L_beta2_ct"]) < 0.001) {
-          newRhoConfig = c("Beta1"=4, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
-        }
-        if(abs(fit$parameter_estimates$par["L_beta1_cf"]) < 0.001 & 
-           abs(fit$parameter_estimates$par["L_beta2_ct"]) < 0.001) {
-          newRhoConfig = c("Beta1"=3, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
-        }}
         
         # if it's an error...
         if(class(fit)=="try-error"){
@@ -461,7 +463,7 @@ for(i in 1:length(Regions)){
                   newtonsteps=1,
                   Q_ik=Q_ik
         ))
-      fit$parameter_estimates$adjustments_for_convergence <- "none"
+      if(!class(fit)=="try-error"){fit$parameter_estimates$adjustments_for_convergence <- "none"}
       
       if(class(fit)=="try-error" || (!class(fit)=="try-error" &  max(abs(fit$parameter_estimates$diagnostics$final_gradient)) > 0.01)){
         
@@ -482,23 +484,25 @@ for(i in 1:length(Regions)){
                     parameters=fit0$ParHat,
                     Q_ik=Q_ik
           ))
-        fit$parameter_estimates$adjustments_for_convergence <- "used fit0 parameters"
+        if(!class(fit)=="try-error"){fit$parameter_estimates$adjustments_for_convergence <- "used fit0 parameters"}
         
       }
       
       if(class(fit)=="try-error" || (!class(fit)=="try-error" &  max(abs(fit$parameter_estimates$diagnostics$final_gradient)) > 0.01)){
         
         if(!class(fit)=="try-error"){
-          if(abs(fit$parameter_estimates$par["L_beta1_cf"]) < 0.001) {
-            newRhoConfig = c("Beta1"=3, "Beta2"=4, "Epsilon1"=4, "Epsilon2"=4)
-          }
-          if(abs(fit$parameter_estimates$par["L_beta2_ct"]) < 0.001) {
-            newRhoConfig = c("Beta1"=4, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
-          }
-          if(abs(fit$parameter_estimates$par["L_beta1_cf"]) < 0.001 & 
-             abs(fit$parameter_estimates$par["L_beta2_ct"]) < 0.001) {
-            newRhoConfig = c("Beta1"=3, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
-          }}
+          if("L_beta1_cf" %in% fit$parameter_estimates$diagnostics$Param & "L_beta2_ct" %in% fit$parameter_estimates$diagnostics$Param){
+            if(abs(fit$parameter_estimates$par["L_beta1_cf"]) < 0.001) {
+              newRhoConfig = c("Beta1"=3, "Beta2"=4, "Epsilon1"=4, "Epsilon2"=4)
+            }
+            if(abs(fit$parameter_estimates$par["L_beta2_ct"]) < 0.001) {
+              newRhoConfig = c("Beta1"=4, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
+            }
+            if(abs(fit$parameter_estimates$par["L_beta1_cf"]) < 0.001 & 
+               abs(fit$parameter_estimates$par["L_beta2_ct"]) < 0.001) {
+              newRhoConfig = c("Beta1"=3, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
+            }}
+        } 
         
         if(class(fit)=="try-error"){
           newRhoConfig = c("Beta1"=3, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
@@ -523,7 +527,8 @@ for(i in 1:length(Regions)){
                     Q_ik=Q_ik
                     
           ))
-        fit$parameter_estimates$adjustments_for_convergence <- "changed RhoConfig"
+        if(!class(fit)=="try-error"){fit$parameter_estimates$adjustments_for_convergence <- "changed RhoConfig"}
+        
       }
       
     }
@@ -538,18 +543,21 @@ for(i in 1:length(Regions)){
     }
     
     
-     # calculate range edges 
+    # calculate range edges with two methods of estimating SE (only one used in the paper)
     if(!class(fit)=="try-error"){
-      out_absolute <- try(
-        get_range_edge( fit.model=fit,
-                        working_dir=paste0(getwd(),"/"), 
-                        Year_Set=Year_Set, 
-                        Years2Include=Years2Include, # drops years with no data (or 100% data)
-                        n_samples=100, 
-                        quantiles=quantiles_of_interest,
-                        "Z_gm_axes"=Z_gm_axes,
-                        "calculate_relative_to_average" = FALSE)
-      )
+      # out_absolute <- try(
+      #   get_range_edge( fit.model=fit,
+      #                   working_dir=paste0(getwd(),"/"), 
+      #                   Year_Set=Year_Set, 
+      #                   Years2Include=Years2Include, # drops years with no data (or 100% data)
+      #                   n_samples=100, 
+      #                   quantiles=quantiles_of_interest,
+      #                   "Z_gm_axes"=Z_gm_axes,
+      #                   "calculate_relative_to_average" = FALSE)
+      # )
+      
+      source(paste0(getwd(),'/functions/get_range_edge.R'))
+      source(paste0(getwd(),'/functions/get_density.R'))    
       
       out_relative <- try(
         get_range_edge( fit.model=fit,
@@ -562,15 +570,16 @@ for(i in 1:length(Regions)){
                         "calculate_relative_to_average" = TRUE)
       )
       
+      # these files are huge, which is why the code to save them is commented out below. density isn't used in the paper, just useful to see and I wanted to keep the method for doing this visible 
       out_density <- try(
         get_density(fit.model=fit,
                     Years2Include=Years2Include)
       )
     }
     
-    if(!class(out_absolute)=='try-error'){
-      out_absolute$species <- paste0(j) 
-      write.csv(out_absolute, file.path(paste0(RegionFile,j,"_absolute_SE_edges.csv")))}
+    # if(!class(out_absolute)=='try-error'){
+    #   out_absolute$species <- paste0(j) 
+    #   write.csv(out_absolute, file.path(paste0(RegionFile,j,"_absolute_SE_edges.csv")))}
     
     if(!class(out_relative)=='try-error'){
       out_relative$species <- paste0(j) 
@@ -580,32 +589,32 @@ for(i in 1:length(Regions)){
     #   out_density$species <- paste0(j) 
     #   write.csv(out_density, file.path(paste0(RegionFile,j,"_density.csv")))}        
     # not saving this right now because each df for each species is ~1M rows, but keeping the code so anyone running line-by-line can easily access the density df
-
+    
     
   }
-     
-     ########################
-     ###  save outputs
-     ########################
-     
-     # not making a collated df for density because they're individually huge 
-     
+  
+  ########################
+  ###  save outputs
+  ########################
+  
+  # not making a collated df for density because they're individually huge 
+  
   rel_edge_files <- list.files(path=RegionFile, pattern="relative_SE_edges.csv", full.names=TRUE)
   rel_edge_df <- dplyr::bind_rows(lapply(rel_edge_files, read.csv))
   rel_edge_df$X <- NULL
   saveRDS(rel_edge_df, paste0(getwd(),"/processed-data/",reg,'_relative_SE_vast_edge_df.rds'))
   
-  abs_edge_files <- list.files(path=RegionFile, pattern="absolute_SE_edges.csv", full.names=TRUE)
-  abs_edge_df <- dplyr::bind_rows(lapply(abs_edge_files, read.csv))
-  abs_edge_df$X <- NULL
-  saveRDS(abs_edge_df, paste0(getwd(),"/processed-data/",reg,'_absolute_SE_vast_edge_df.rds'))
+  # abs_edge_files <- list.files(path=RegionFile, pattern="absolute_SE_edges.csv", full.names=TRUE)
+  # abs_edge_df <- dplyr::bind_rows(lapply(abs_edge_files, read.csv))
+  # abs_edge_df$X <- NULL
+  # saveRDS(abs_edge_df, paste0(getwd(),"/processed-data/",reg,'_absolute_SE_vast_edge_df.rds'))
   
   capture.output( settings, file=file.path(RegionFile,'settings.txt'))
   
-  spp_not_converged <- setdiff(Species_list, unique(rel_edge_df$species))
+  spp_not_converged <- setdiff(Species_list, unique(rel_edge_df$species)) 
   saveRDS(spp_not_converged, paste0(RegionFile, "spp_not_converged.rds"))
-
   
-  }# end of parallel
+  
+}# end of parallel
 
 

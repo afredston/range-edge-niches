@@ -10,8 +10,10 @@ library(lubridate)
 library(purrr)
 library(rnaturalearth)
 
+# explicitly assign functions found in multiple packages
 map <- purrr::map
 here <- here::here
+select <- dplyr::select
 
 source(here("functions","sfc_as_cols.R"))
 
