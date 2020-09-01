@@ -7,16 +7,15 @@ edge.spp.dat <- readRDS(here("processed-data","all_edge_spp_df.rds"))%>%
   mutate(axis = as.character(axis)) # convert from factor
 
 # make example plots for methods schematic 
-ex.spp1 <- "chionoecetes opilio" # snow crab 
-ex.spp2 <- "centropristis striata" # black seabass
-# ex.spp2 <- "gadus morhua" # atlantic cod
-ex.spp3 <- "sebastes pinniger" # canary rockfish
+ex.spp.ebs <- "paralithodes camtschaticus" # red king crab
+ex.spp.neus <- "gadus morhua" # atlantic cod
+ex.spp.wc <- "sebastes pinniger" # canary rockfish
 
 # make time-series plots for example figure:
-ex1gg <- edge.spp.dat %>%
+ex.gg.ebs <- edge.spp.dat %>%
   filter(region=="ebs",
          axis=="line_km",
-         species==ex.spp1) %>% 
+         species==ex.spp.ebs) %>% 
   ggplot(aes(x=year, y=Estimate)) +
   geom_point(color="grey", fill="grey") +
   geom_line(color="grey") +
@@ -28,10 +27,10 @@ ex1gg <- edge.spp.dat %>%
   theme(axis.text.x=element_text(angle=45, hjust=1))+
   NULL
 
-ex2gg <- edge.spp.dat %>%
+ex.gg.neus <- edge.spp.dat %>%
   filter(region=="neus",
          axis=="coast_km",
-         species==ex.spp2) %>% 
+         species==ex.spp.neus) %>% 
   ggplot(aes(x=year, y=Estimate)) +
   geom_point(color="grey", fill="grey") +
   geom_line(color="grey") +
@@ -43,10 +42,10 @@ ex2gg <- edge.spp.dat %>%
   theme(axis.text.x=element_text(angle=45, hjust=1))+
   NULL
 
-ex3gg <- edge.spp.dat %>%
+ex.gg.wc <- edge.spp.dat %>%
   filter(region=="wc",
          axis=="coast_km",
-         species==ex.spp3) %>% 
+         species==ex.spp.wc) %>% 
   ggplot(aes(x=year, y=Estimate)) +
   geom_point(color="grey", fill="grey") +
   geom_line(color="grey") +
@@ -58,9 +57,9 @@ ex3gg <- edge.spp.dat %>%
   theme(axis.text.x=element_text(angle=45, hjust=1))+
   NULL
 
-ggsave(ex1gg, dpi=600, width=4, height=4, filename=here("results",paste0("example_edge_",ex.spp1,".png")), scale=1.2)
-ggsave(ex2gg, dpi=600, width=4, height=4, filename=here("results",paste0("example_edge_",ex.spp2,".png")))
-ggsave(ex3gg, dpi=600, width=1.5, height=1.5, filename=here("results",paste0("example_edge_",ex.spp3,".png")), scale=1.5)
+ggsave(ex.gg.ebs, dpi=600, width=4, height=4, filename=here("results",paste0("example_edge_",ex.spp.ebs,".png")), scale=1.2)
+ggsave(ex.gg.neus, dpi=600, width=4, height=4, filename=here("results",paste0("example_edge_",ex.spp.neus,".png")))
+ggsave(ex.gg.wc, dpi=600, width=1.5, height=1.5, filename=here("results",paste0("example_edge_",ex.spp.wc,".png")), scale=1.5)
 
 neus.gg <- edge.spp.dat %>%
   filter(region=="neus",
