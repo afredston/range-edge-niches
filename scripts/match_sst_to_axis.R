@@ -45,7 +45,7 @@ ebs.sst.rotated <- ebs.sst %>%
   dplyr::select(-year) %>%
   rename(lat=y, lon=x) 
 
-saveRDS(ebs.sst.rotated, file=here("processed-data","ebs_sst_rotated.rds"))
+saveRDS(ebs.sst.rotated, file=here("processed-data","ebs_sst_linedist.rds"))
 
 
 #####
@@ -97,4 +97,4 @@ neus.sst.coastdist <- readRDS(here("processed-data","neus_sst_corrected.rds")) %
 saveRDS(neus.sst.coastdist, here("processed-data","neus_sst_coastdist.rds"))
 saveRDS(wc.sst.coastdist, here("processed-data","wc_sst_coastdist.rds"))
 
-rm(list=ls())
+# rm(list=ls())

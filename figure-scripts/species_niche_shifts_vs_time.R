@@ -57,7 +57,7 @@ neus.cold.niche.time.gg <- dat.predict.niche %>%
   geom_errorbar() +
   scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
   theme_bw() +
-  labs(x="Year",y="Sea Surface Temperature at Edge (°C)", title="Northeast Cold Edges", color=NULL) +
+  labs(x="Year",y="Sea Surface Temperature at Edge (°C)", title="Northeast Poleward Edges", color=NULL) +
   theme(legend.position="bottom",
         axis.text.x = element_text(angle = 90))+
   scale_x_continuous(limits=c(1968, 2018), breaks=seq(1968, 2018, 5))+ 
@@ -74,7 +74,7 @@ neus.warm.niche.time.gg <- dat.predict.niche %>%
   geom_errorbar() +
   scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
   theme_bw() +
-  labs(x="Year",y="Sea Surface Temperature at Edge (°C)",title="Northeast Warm Edges",  color=NULL) +
+  labs(x="Year",y="Sea Surface Temperature at Edge (°C)",title="Northeast Equatorward Edges",  color=NULL) +
   theme(legend.position="bottom",
         axis.text.x = element_text(angle = 90))+
   scale_x_continuous(limits=c(1968, 2018), breaks=seq(1968, 2018, 5))+ 
@@ -91,7 +91,7 @@ wc.cold.niche.time.gg <- dat.predict.niche %>%
   geom_errorbar() +
   scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
   theme_bw() +
-  labs(x="Year",y="Sea Surface Temperature at Edge (°C)", title="West Coast Cold Edges", color=NULL) +
+  labs(x="Year",y="Sea Surface Temperature at Edge (°C)", title="West Coast Poleward Edges", color=NULL) +
   theme(legend.position="bottom",
         axis.text.x = element_text(angle = 90))+
   scale_x_continuous(limits=c(1976, 2018), breaks=seq(1976, 2018, 4))+ 
@@ -108,7 +108,7 @@ wc.warm.niche.time.gg <- dat.predict.niche %>%
   geom_errorbar() +
   scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
   theme_bw() +
-  labs(x="Year",y="Sea Surface Temperature at Edge (°C)",title="West Coast Warm Edges",  color=NULL) +
+  labs(x="Year",y="Sea Surface Temperature at Edge (°C)",title="West Coast Equatorward Edges",  color=NULL) +
   theme(legend.position="bottom",
         axis.text.x = element_text(angle = 90))+
   scale_x_continuous(limits=c(1976, 2018), breaks=seq(1976, 2018, 4))+ 
@@ -125,7 +125,7 @@ ebs.cold.niche.time.gg <- dat.predict.niche %>%
   geom_errorbar() +
   scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
   theme_bw() +
-  labs(x="Year",y="Sea Surface Temperature at Edge (°C)", title="Eastern Bering Sea Cold Edges", color=NULL) +
+  labs(x="Year",y="Sea Surface Temperature at Edge (°C)", title="Eastern Bering Sea Poleward Edges", color=NULL) +
   theme(legend.position="bottom",
         axis.text.x = element_text(angle = 90))+
   scale_x_continuous(limits=c(1988, 2018), breaks=seq(1988, 2018, 4))+ 
@@ -142,7 +142,7 @@ ebs.warm.niche.time.gg <- dat.predict.niche %>%
   geom_errorbar() +
   scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
   theme_bw() +
-  labs(x="Year",y="Sea Surface Temperature at Edge (°C)",title="Eastern Bering Sea Warm Edges",  color=NULL) +
+  labs(x="Year",y="Sea Surface Temperature at Edge (°C)",title="Eastern Bering Sea Equatorward Edges",  color=NULL) +
   theme(legend.position="bottom",
         axis.text.x = element_text(angle = 90))+
   scale_x_continuous(limits=c(1988, 2018), breaks=seq(1988, 2018, 4))+ 
