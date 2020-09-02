@@ -388,7 +388,7 @@ spp.bayes.niche.lm.stats %>%
 ##########################
 
 # while most plots are generated in figure-scripts, these require the full STAN output to generate posteriors 
-
+# the other small plots in the methods figure are generated in the respective figure-scripts files (e.g., time-series of range edges are generated in figure-scripts/species_edges_vs_time.R)
 
 # non tracker - lobster - neus 
 
@@ -422,8 +422,9 @@ ex.spp.bayes.gg.ebs <- spp.bayes.niche.filter %>%
   geom_segment(aes(x=summary.spp.ebs[summary.spp.ebs$predicted.var=="predict.sstmax",]$lower, xend=summary.spp.ebs[summary.spp.ebs$predicted.var=="predict.sstmax",]$upper, y=-1, yend=-1), color="#DF2301", lwd=2) + # add 90% credible interval 
   geom_segment(aes(x=summary.spp.ebs[summary.spp.ebs$predicted.var=="predict.sstmin",]$lower, xend=summary.spp.ebs[summary.spp.ebs$predicted.var=="predict.sstmin",]$upper, y=0, yend=0), color="#3A4ED0", lwd=2) +
   scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
-  labs(x="Posterior Distribution of Coefficient (°C/year)",y="Density", fill=NULL) +
-  theme(legend.position="bottom") +
+  labs(x="Coefficient (°C/year)",y="Density", fill=NULL) +
+  scale_x_continuous(breaks=c(-0.1, -0.05, 0, 0.05)) +
+  theme(legend.position="none") +
   NULL
 ex.spp.bayes.gg.ebs
 
@@ -440,8 +441,9 @@ ex.spp.bayes.gg.neus <- spp.bayes.niche.filter %>%
   geom_vline(aes(xintercept=0), color="black", linetype="dotted") + 
   geom_segment(aes(x=summary.spp.neus[summary.spp.neus$predicted.var=="predict.sstmax",]$lower, xend=summary.spp.neus[summary.spp.neus$predicted.var=="predict.sstmax",]$upper, y=-1, yend=-1), color="#DF2301", lwd=2) + # add 90% credible interval 
   geom_segment(aes(x=summary.spp.neus[summary.spp.neus$predicted.var=="predict.sstmin",]$lower, xend=summary.spp.neus[summary.spp.neus$predicted.var=="predict.sstmin",]$upper, y=0, yend=0), color="#3A4ED0", lwd=2) +scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
-  labs(x="Posterior Distribution of Coefficient (°C/year)",y="Density", fill=NULL) +
-  theme(legend.position="bottom") +
+  labs(x="Coefficient (°C/year)",y="Density", fill=NULL) +
+  scale_x_continuous(breaks=c(-0.1, -0.05, 0, 0.05)) +
+  theme(legend.position="none") +
   NULL
 ex.spp.bayes.gg.neus
 
@@ -458,57 +460,12 @@ ex.spp.bayes.gg.wc <- spp.bayes.niche.filter %>%
   geom_vline(aes(xintercept=0), color="black", linetype="dotted") + 
   geom_segment(aes(x=summary.spp.wc[summary.spp.wc$predicted.var=="predict.sstmax",]$lower, xend=summary.spp.wc[summary.spp.wc$predicted.var=="predict.sstmax",]$upper, y=-1, yend=-1), color="#DF2301", lwd=2) + # add 90% credible interval 
   geom_segment(aes(x=summary.spp.wc[summary.spp.wc$predicted.var=="predict.sstmin",]$lower, xend=summary.spp.wc[summary.spp.wc$predicted.var=="predict.sstmin",]$upper, y=0, yend=0), color="#3A4ED0", lwd=2) +scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
-  labs(x="Posterior Distribution of Coefficient (°C/year)",y="Density", fill=NULL) +
-  theme(legend.position="bottom") +
+  labs(x="Coefficient (°C/year)",y="Density", fill=NULL) +
+  scale_x_continuous(breaks=c(-0.1, -0.05, 0, 0.05)) +
+  theme(legend.position="none") +
   NULL
 ex.spp.bayes.gg.wc
 
-ex.spp.time.gg.ebs <- dat.predict.niche %>%
-  filter(species==ex.spp.ebs) %>%
-  mutate(species = str_to_sentence(species)) %>%
-  ggplot() +
-  geom_point(aes(x=year_match, y=sst, color=predicted.var)) +
-  geom_line(aes(x=year_match, y=sst, color=predicted.var)) +
-  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
-  theme_bw() +
-  labs(x="Year",y="Sea Surface Temperature at Edge (°C)", color=NULL) +
-  theme(legend.position="bottom")+
-  scale_x_continuous(limits=c(1988, 2018), breaks=seq(1988, 2018, 4))+
-  NULL
-ex.spp.time.gg.ebs
-
-ex.spp.time.gg.neus <- dat.predict.niche %>%
-  filter(species==ex.spp.neus) %>%
-  mutate(species = str_to_sentence(species)) %>%
-  ggplot() +
-  geom_point(aes(x=year_match, y=sst, color=predicted.var)) +
-  geom_line(aes(x=year_match, y=sst, color=predicted.var)) +
-  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
-  theme_bw() +
-  labs(x="Year",y="Sea Surface Temperature at Edge (°C)", color=NULL) +
-  theme(legend.position="bottom",
-        axis.text.x=element_text(angle=45))+
-  scale_x_continuous(limits=c(1968, 2018), breaks=seq(1968, 2018, 4))+
-  NULL
-ex.spp.time.gg.neus
-
-ex.spp.time.gg.wc <- dat.predict.niche %>%
-  filter(species==ex.spp.wc) %>%
-  mutate(species = str_to_sentence(species)) %>%
-  ggplot() +
-  geom_point(aes(x=year_match, y=sst, color=predicted.var)) +
-  geom_line(aes(x=year_match, y=sst, color=predicted.var)) +
-  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
-  theme_bw() +
-  labs(x="Year",y="Sea Surface Temperature at Edge (°C)", color=NULL) +
-  theme(legend.position="bottom")+
-  scale_x_continuous(limits=c(1976, 2018), breaks=seq(1976, 2018, 5))+
-  NULL
-ex.spp.time.gg.wc
-
-ggsave(ex.spp.bayes.gg.ebs, dpi=160, width=4, height=4, filename=here("results",paste0("example_posterior_",ex.spp.ebs, ".png")))
-ggsave(ex.spp.bayes.gg.neus, dpi=160, width=4, height=4, filename=here("results",paste0("example_posterior_",ex.spp.neus,".png")))
-ggsave(ex.spp.bayes.gg.wc, dpi=160, width=4, height=4, filename=here("results",paste0("example_posterior_",ex.spp.wc,".png")))
-ggsave(ex.spp.time.gg.ebs, dpi=160, width=4, height=4, filename=here("results",paste0("example_niche_",ex.spp.ebs,".png")))
-ggsave(ex.spp.time.gg.neus, dpi=160, width=4, height=4, filename=here("results",paste0("example_niche_",ex.spp.neus,".png")))
-ggsave(ex.spp.time.gg.wc, dpi=160, width=4, height=4, filename=here("results",paste0("example_niche_",ex.spp.wc,".png")))
+ggsave(ex.spp.bayes.gg.ebs, dpi=600, width=1.5, height=1.4, filename=here("results",paste0("example_posterior_",ex.spp.ebs, ".png")),scale=1.5)
+ggsave(ex.spp.bayes.gg.neus, dpi=600, width=1.5, height=1.4, filename=here("results",paste0("example_posterior_",ex.spp.neus,".png")),scale=1.5)
+ggsave(ex.spp.bayes.gg.wc, dpi=600, width=1.5, height=1.4, filename=here("results",paste0("example_posterior_",ex.spp.wc,".png")),scale=1.5)
