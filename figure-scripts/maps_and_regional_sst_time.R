@@ -4,6 +4,7 @@ library(here)
 library(sf)
 library(purrr)
 library(broom)
+library(knitr)
 here <- here::here
 
 # load all temperature datasets 
@@ -118,9 +119,14 @@ ebsgg <- ebs_sst_summary %>%
         panel.grid.minor = element_blank()) + 
   NULL
 
-ggsave(neusgg, filename=here("results","neus_sst_inset_plot.png"), height=2, width=2, dpi=160)
-ggsave(wcgg, filename=here("results","wc_sst_inset_plot.png"), height=2, width=2,dpi=160)
-ggsave(ebsgg, filename=here("results","ebs_sst_inset_plot.png"), height=2,width=2, dpi=160)
+ggsave(neusgg, filename=here("results","neus_sst_inset_plot.png"), height=25, width=25, units="mm", scale=2, dpi=600)
+ggsave(wcgg, filename=here("results","wc_sst_inset_plot.png"), height=25, width=25, scale=2,units="mm",dpi=600)
+ggsave(ebsgg, filename=here("results","ebs_sst_inset_plot.png"), height=25, width=25, scale=2,units="mm", dpi=600)
+
+# get rid of whitespace
+plot_crop(here("results","neus_sst_inset_plot.png"))
+plot_crop(here("results","wc_sst_inset_plot.png"))
+plot_crop(here("results","ebs_sst_inset_plot.png"))
 
 # make maps of each region using the bathymetric masks generated in prep_sst.R 
 
@@ -164,10 +170,8 @@ neusmap <- ggplot() +
         text=element_text(family="sans",size=12,color="black"),
         legend.text = element_text(size=12),
         axis.text=element_text(family="sans",size=8,color="black"), 
-        axis.title=element_blank(),
-        plot.margin=margin(t = 5, r = 0, b = 15, l = 5, unit = "pt")) +
+        axis.title=element_blank()) +
   NULL
-neusmap
 
 wcmap <- ggplot() + 
   geom_sf(data=wc_bathy, color="skyblue3") +
@@ -181,8 +185,7 @@ wcmap <- ggplot() +
         legend.text = element_text(size=12),
         axis.text=element_text(family="sans",size=8,color="black"),
         axis.text.x = element_text(angle = 45, hjust = 1),
-        axis.title=element_blank(),
-        plot.margin=margin(t = 5, r = 0, b = 15, l = 5, unit = "pt")) +
+        axis.title=element_blank()) +
   NULL
 
 ebsmap <- ggplot() + 
@@ -198,11 +201,14 @@ ebsmap <- ggplot() +
         legend.text = element_text(size=12),
         axis.text=element_text(family="sans",size=8,color="black"), 
         axis.title=element_blank(),
-        plot.margin=margin(t = 5, r = 0, b = 15, l = 5, unit = "pt"),
         axis.text.x = element_text(angle=45, hjust=1)) +
   NULL
-ebsmap
 
-ggsave(neusmap, filename=here("results","region_map_neus.png"), height=4, dpi=160)
-ggsave(wcmap, filename=here("results","region_map_wc.png"), height=4, dpi=160)
-ggsave(ebsmap, filename=here("results","region_map_ebs.png"), height=4, width=8, dpi=160)
+ggsave(neusmap, filename=here("results","region_map_neus.png"), height=80, units="mm", dpi=600)
+ggsave(wcmap, filename=here("results","region_map_wc.png"), height=80, units="mm", dpi=600)
+ggsave(ebsmap, filename=here("results","region_map_ebs.png"), dpi=600, height=80, units="mm")
+
+# get rid of unwanted whitespace
+plot_crop(here("results","region_map_ebs.png"))
+plot_crop(here("results","region_map_wc.png"))
+plot_crop(here("results","region_map_neus.png"))

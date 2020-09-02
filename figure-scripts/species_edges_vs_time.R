@@ -37,7 +37,7 @@ ex.gg.neus <- edge.spp.dat %>%
   geom_errorbar(aes(ymin=Estimate-Std.Error, ymax=Estimate+Std.Error), color="grey") +
   theme(legend.position = "none") +
   labs(x="Year", y="Coastal Distance (km)") +
-  scale_x_continuous(limits=c(1968, 2018), breaks=seq(1968, 2018, 4)) +
+  scale_x_continuous(limits=c(1968, 2018), breaks=seq(1968, 2018, 5)) +
   theme_bw() +
   theme(axis.text.x=element_text(angle=45, hjust=1))+
   NULL
@@ -57,9 +57,12 @@ ex.gg.wc <- edge.spp.dat %>%
   theme(axis.text.x=element_text(angle=45, hjust=1))+
   NULL
 
-ggsave(ex.gg.ebs, dpi=600, width=4, height=4, filename=here("results",paste0("example_edge_",ex.spp.ebs,".png")), scale=1.2)
-ggsave(ex.gg.neus, dpi=600, width=4, height=4, filename=here("results",paste0("example_edge_",ex.spp.neus,".png")))
+ggsave(ex.gg.ebs, dpi=600, width=1.5, height=1.5, filename=here("results",paste0("example_edge_",ex.spp.ebs,".png")), scale=1.5)
+ggsave(ex.gg.neus, dpi=600, width=1.5, height=1.5, filename=here("results",paste0("example_edge_",ex.spp.neus,".png")), scale=1.5)
 ggsave(ex.gg.wc, dpi=600, width=1.5, height=1.5, filename=here("results",paste0("example_edge_",ex.spp.wc,".png")), scale=1.5)
+
+
+#### plots for all species, for supplement
 
 neus.gg <- edge.spp.dat %>%
   filter(region=="neus",
