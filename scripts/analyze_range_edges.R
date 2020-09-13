@@ -26,14 +26,6 @@ dat.summary <- dat.models %>%
                          quantile_0.99="Cold Edge"))
 # write out all the edge species used in the analysis, with species names, regions, and edge type 
 write_csv(dat.summary, here("results","edge_species.csv"))
-# 
-# dat.models.groups <- dat.models %>%
-#   select(species, edgetype, region, taxongroup) %>%
-#   distinct() %>%
-#   mutate(species = as.factor(species), 
-#          edgetype=as.factor(edgetype),
-#          region=as.factor(region),
-#          taxongroup=as.factor(taxongroup))
 
 # read in results from Bayesian models 
 spp.bayes.edge.lm.df.summary <- read_csv(here("results","species_edge_shifts_vs_time.csv")) # edge shifts over time
@@ -63,12 +55,3 @@ spp.bayes.niche.results <- spp.bayes.niche.lm.stats %>%
   summarise()
 # save list of range edges with which thermal extreme they tracked (cold, warm, both, or neither)
 write_csv(spp.bayes.niche.results, here("results","edge_thermal_extreme_tracked_summary.csv"))
-
-# calculate stats
-# spp.bayes.niche.groups %>% left_join(dat.models.groups) %>% group_by(niche.group) %>% summarise(n=n()) # break down by niche grouping
-# spp.bayes.niche.groups %>% left_join(dat.models.groups) %>% group_by(niche.group, taxongroup) %>% summarise(n=n()) # break down by fish/invert and niche grouping
-# spp.bayes.niche.groups %>% left_join(dat.models.groups) %>% group_by(region, taxongroup) %>% summarise(n=n()) # by region and fish/invert
-# spp.bayes.niche.groups %>% group_by(niche.group, region) %>% summarise(n=n()) # by region and niche grouping
-# spp.bayes.niche.groups %>% group_by(niche.group, quantile) %>% summarise(n=n()) # by edge type and niche grouping
-# spp.bayes.niche.groups %>% group_by(region, quantile) %>% summarise(n=n()) # by region and edge type
-# spp.bayes.niche.groups %>% group_by(region, quantile, niche.group) %>% summarise(n=n()) # by region, niche grouping, and edge type

@@ -30,7 +30,7 @@ gg.neus.violin <- spp.bayes.edge.lm.df.summary %>%
   theme(legend.position = "none", axis.text.x = element_blank() ) +
   NULL
 gg.neus.violin
-ggsave(gg.neus.violin, filename=here("results","neus_edge_vs_niche_shifts.png"), width=110, units="mm", height=60, dpi=160, scale=1.5)
+ggsave(gg.neus.violin, filename=here("results","neus_edge_vs_niche_shifts.png"), width=110, units="mm", height=60, dpi=600, scale=1.5)
 
 gg.wc.violin <- spp.bayes.edge.lm.df.summary %>%
   left_join(spp.bayes.niche.results, by=c("species","region","quantile")) %>%
@@ -57,7 +57,7 @@ gg.wc.violin <- spp.bayes.edge.lm.df.summary %>%
   theme(legend.position = "none", axis.text.x = element_blank()) +
   NULL
 gg.wc.violin
-ggsave(gg.wc.violin, filename=here("results","wc_edge_vs_niche_shifts.png"), width=110, units="mm", height=50, dpi=160, scale=1.5)
+ggsave(gg.wc.violin, filename=here("results","wc_edge_vs_niche_shifts.png"), width=110, units="mm", height=50, dpi=600, scale=1.5)
 
 gg.ebs.violin <- spp.bayes.edge.lm.df.summary %>%
   left_join(spp.bayes.niche.results, by=c("species","region","quantile")) %>%
@@ -83,4 +83,4 @@ gg.ebs.violin <- spp.bayes.edge.lm.df.summary %>%
   theme(legend.position = "none") +
   NULL
 gg.ebs.violin
-ggsave(gg.ebs.violin, filename=here("results","ebs_edge_vs_niche_shifts.png"), width=110, units="mm", height=45, dpi=160, scale=1.5)
+ggsave(gg.ebs.violin, filename=here("results","ebs_edge_vs_niche_shifts.png"), width=107.7, units="mm", height=45, dpi=600, scale=1.5)
