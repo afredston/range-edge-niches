@@ -100,44 +100,59 @@ rm(spp.bayes.edge.filter) # if they all converged this is the same as spp.bayes.
 # bayes.lm.time.gg <- spp.bayes.edge.lm.df  %>%
 #   group_by(.draw, region) %>%
 #   mutate(mean.param = mean(year) ) %>%
-#   ungroup() %>% 
+#   ungroup() %>%
 #   select(.draw, mean.param, region) %>%
 #   distinct() %>%
 #   ggplot() +
 #   theme_bw() +
 #   geom_density(aes(x=mean.param, fill=region), color="black", alpha=0.5) +
 #   scale_fill_brewer(type="seq", palette="YlGnBu", labels=c("Eastern Bering Sea","Northeast","West Coast")) +
-#   labs(x="Coefficient of Edge vs Time (km/yr)", y="Density", fill="Region") +
+#   labs(x="Coefficient of Edge Position on Time (km/yr)", y="Density", fill="Region") +
 #   theme(legend.position="bottom") +
 #   NULL
 # bayes.lm.time.gg
 # ggsave(bayes.lm.time.gg, width=3, height=4, dpi=160, filename=here("results","edge_coefficients_time.png"), scale=1.6)
 
-# bayes.lm.time.edgetype.gg <- spp.bayes.edge.lm.df  %>%
-#   group_by(.draw, region, quantile) %>%
-#   mutate(mean.param = mean(year) ) %>%
-#   ungroup() %>% 
-#   select(.draw, mean.param, region, quantile) %>%
-#   distinct() %>%
-#   mutate(quantile=recode(quantile,
-#                          quantile_0.01="Warm Limit",
-#                          quantile_0.99="Cold Limit")) %>%
-#   ggplot() +
-#   theme_bw() +
-#   geom_density(aes(x=mean.param, fill=region), color="black", alpha=0.5) +
-#   scale_fill_brewer(type="seq", palette="YlGnBu", labels=c("Eastern Bering Sea","Northeast","West Coast")) +
-#   labs(x="Coefficient of Edge vs Time (km/yr)", y="Density", fill="Region") +
-#   theme(legend.position="bottom") +
-#   facet_wrap(~quantile) +
-#   NULL
-# bayes.lm.time.edgetype.gg
-# ggsave(bayes.lm.time.edgetype.gg, width=6, height=4, dpi=160, filename=here("results","edge_coefficients_time_edgetype.png"), scale=1.6)
+bayes.lm.time.edgetype.gg <- spp.bayes.edge.lm.df  %>%
+  group_by(.draw, region, quantile) %>%
+  mutate(mean.param = mean(year) ) %>%
+  ungroup() %>%
+  select(.draw, mean.param, region, quantile) %>%
+  distinct() %>%
+  mutate(quantile=recode(quantile,
+                         quantile_0.01="Equatorward Edge",
+                         quantile_0.99="Poleward Edge"),
+         region=factor(region, levels=c('neus','wc','ebs'))) %>%
+  ggplot() +
+  theme_bw() +
+  geom_density(aes(x=mean.param, fill=region), color="black", alpha=0.5) +
+  scale_fill_brewer(type="seq", palette="YlGnBu", labels=c("Northeast","West Coast","Eastern Bering Sea")) +
+  labs(x="Coefficient of Edge Position on Time (km/yr)", y="Density", fill="Region") +
+  theme(legend.position="bottom") +
+  facet_wrap(~quantile) +
+  NULL
+bayes.lm.time.edgetype.gg
+ggsave(bayes.lm.time.edgetype.gg, width=168, height=100,
+       units="mm", dpi=600, filename=here("results","edge_coefficients_time_edgetype.png"))
+
+# generate posteriors grouped different ways--need full model output for this 
 
 # edge shift stats pooled by region
 spp.bayes.edge.lm.df %>%
   group_by(.draw, region) %>%
   summarise(mean.year = mean(year)) %>%
   group_by(region) %>%
+  summarise(mean=mean(mean.year),
+            median=median(mean.year),
+            lower=quantile(mean.year, 0.05),
+            upper=quantile(mean.year, 0.95))
+
+
+# edge shift stats pooled by edgetype
+spp.bayes.edge.lm.df %>%
+  group_by(.draw, quantile) %>%
+  summarise(mean.year = mean(year)) %>%
+  group_by(quantile) %>%
   summarise(mean=mean(mean.year),
             median=median(mean.year),
             lower=quantile(mean.year, 0.05),

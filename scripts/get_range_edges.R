@@ -1,4 +1,7 @@
 # fit single-species models and get range limits in all study regions using VAST 
+# https://github.com/James-Thorson-NOAA/VAST
+
+# DO NOT JUST HIT RUN! this script is designed to run in parallel. please read it and adjust for your own computational resources first. 
 
 ########################
 ### load packages, functions 
@@ -18,26 +21,37 @@ library(foreach)
 ### model settings
 ########################
 
-# see Methods and VAST documentation for more background
-quantiles_of_interest = c(0.01, 0.5, 0.99)
+# quantiles to report along axes of measurement (0.5 = range median)
+quantiles_of_interest = c(0.01, 0.05, 0.5, 0.95, 0.99)
 
-n_x = 100 
-fine_scale = TRUE
+n_x = 100 # number of knots in the VAST mesh 
+fine_scale = TRUE # spatial variables interpolated between knots, as opposed to assigned the nearest knot 
 
-FieldConfig = c("Omega1"=0, "Epsilon1"=1, "Omega2"=0, "Epsilon2"=1)
+# predictors used in the model: setting any to 0 removes them for the model structure. we did this for spatial predictors to force the model to attribute variation to spatiotemporal predictors; otherwise it sometimes predicts perfectly static ranges over time (i.e., entirely spatial variation)
+FieldConfig = c("Omega1"=0, # spatial variation in first linear predictor (encounter probability or zero-inflation) 
+                "Epsilon1"=1, # spatiotemporal variation in same
+                "Omega2"=0, # spatial variation in second linear predictor (catch rates or count-data intensity) 
+                "Epsilon2"=1 # spatiotemporal variation in same
+)
 
-RhoConfig = c("Beta1"=4, "Beta2"=4, "Epsilon1"=4, "Epsilon2"=4)
-OverdispersionConfig = c("Eta1"=0, "Eta2"=0)
-ObsModel = c(2,1)
+# specify model structure; note that when models do not converge, we sequentially reduce the number of parameters being estimated by setting some of these parameters to 1
+RhoConfig = c("Beta1"=4, # "autoregressive"; intercept estimated as a fixed effect
+              "Beta2"=4, # "autoregressive"; intercept estimated as a fixed effect
+              "Epsilon1"=4, # "autoregressive";  autocorrelation in temporal variation  estimated as a fixed effect
+              "Epsilon2"=4 # "autoregressive";  autocorrelation in temporal variation  estimated as a fixed effect
+) #### FLAG: setting these to 4 is termed a fixed effect in the VAST manual and a random effect in the documentation for make_data
 
-Options =  c("Calculate_Range"=1)
+OverdispersionConfig = c("Eta1"=0, "Eta2"=0) # turning off vessel-level catchability factors 
+ObsModel = c(2,1) # specifies functional form of encounter probabilities--here, lognormal
 
-strata.limits <- data.frame('STRATA'="All_areas")
+Options =  c("Calculate_Range"=1) # turn on range calculations
 
-Species_set = 100
+# strata.limits <- data.frame('STRATA'="All_areas")
 
-Regions = c("Northwest_Atlantic","California_current","Eastern_Bering_Sea")
-regs = c("neus","wc","ebs")
+Species_set = 100 # max number of species to download in a region (ranked by frequency)
+
+Regions = c("Northwest_Atlantic","California_current","Eastern_Bering_Sea") # vector of study regions
+regs = c("neus","wc","ebs") # short names for Regions
 
 ########################
 ### start for loop for each region
@@ -124,6 +138,7 @@ for(i in 1:length(Regions)){
   ### other model set-up
   ########################
   
+  # bind together all the model settings we specified earlier
   settings = make_settings( "n_x"=n_x, "Region"=Region, purpose="index", bias.correct=FALSE, use_anisotropy=FALSE,
                             "FieldConfig"=FieldConfig, "RhoConfig"=RhoConfig, "OverdispersionConfig"=OverdispersionConfig,
                             "Options"=Options,"ObsModel"=ObsModel  )
@@ -175,7 +190,7 @@ for(i in 1:length(Regions)){
   ########################
   
   detectCores()
-  registerDoParallel(18) # UPDATE FOR YOUR OWN MACHINE
+  registerDoParallel(36) # UPDATE FOR YOUR OWN MACHINE
   
   foreach(j = Species_list) %dopar%{
     library(VAST)
@@ -231,7 +246,7 @@ for(i in 1:length(Regions)){
                 run_model=FALSE
       )
     
-    # WEST COAST ONLY--set up catchability covariate 
+    # WEST COAST ONLY--set up catchability covariate in model structure because survey methods changed from annual to triennial
     if(reg=="wc"){
       Q_ik <- matrix( ifelse(Data_Geostat$Survey=='annual', 1, 0), ncol=1 ) 
     }
@@ -239,6 +254,8 @@ for(i in 1:length(Regions)){
     ########################
     ###  write out Z_gm if necessary 
     ########################
+    
+    # Z_gm is the VAST matrix that specifies the spatial axes along which biomass is estimated. here, we're extracting it, converting it from northings/eastings to lon/lat, merging it with the axes of measurement we already generated for each region, and then combining the whole thing back into Z_gm so that VAST will estimate biomass along the axes of measurement in addition to northings/eastings. 
     
     # if Z_gm matrix does not exist yet, generate it and save it 
     if (!file.exists(Z_gmFile) & reg %in% c('neus','wc')){
@@ -312,28 +329,12 @@ for(i in 1:length(Regions)){
     ###  re-build and run model 
     ########################
     
-    # this script includes progressive checks for model fitting issues, and re-runs fit_model with different specifications as necessary.  
-    # WC is separated because of the extra catchability coefficient for their survey change 
+    # this script includes sequential checks for model fitting issues, and re-runs fit_model with successively fewer parameters to estimate to get troublesome species models to converge. 
+    # WC is separated because of the extra catchability coefficient Q_ik for their survey change. 
     
-    # attempt 0: estimate parameters without estimating standard errors, just so we have them if needed later. this should run fine for all species. 
     if(reg %in% c('ebs','neus')){
-      fit0 =try(
-        fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
-                  "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
-                  "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
-                  "a_i"=Data_Geostat[,'AreaSwept_km2'], 
-                  "getReportCovariance"=FALSE, "getJointPrecision"=TRUE,
-                  lower=-Inf, upper=Inf,
-                  test_fit = FALSE,
-                  fine_scale=fine_scale,
-                  anisotropy=FALSE,
-                  Use_REML=TRUE,
-                  Z_gm = Z_gm,
-                  getsd=FALSE,
-                  newtonsteps=0
-        ))
       
-      # attempt 1: re-run model with SE estimation. if this model has no convergence issues as tested below, it will be the last model we run for this species. 
+      # attempt 1: re-run model with all the settings we specified above. if this model has no convergence issues as tested below, it will be the last model we run for this species. 
       fit = try(
         fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
                   "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
@@ -350,13 +351,30 @@ for(i in 1:length(Regions)){
                   newtonsteps=1
         ))
       
-      if(!class(fit)=="try-error"){fit$parameter_estimates$adjustments_for_convergence <- "none"}
+      if(!class(fit)=="try-error"){fit$parameter_estimates$adjustments_for_convergence <- "none"} # annotate what was changed in model, if anything 
       
-      
-      # check that all maximum gradients have an absolute value below 0.01 and the model didn't throw an error 
+      # check that all maximum gradients have an absolute value below 0.01 (test for convergence) and the model didn't throw an error 
       if(class(fit)=="try-error" || (!class(fit)=="try-error" &  max(abs(fit$parameter_estimates$diagnostics$final_gradient)) > 0.01)){
         
-        # attempt 2: if fit didn't work above, try re-running it with the parameter estimates from fit0
+        # attempt 2: if attempt 1 didn't work, try estimating parameters without estimating standard errors, and then passing them to fit_model. 
+        
+        #   this should run fine for all species. 
+        fit0 =try(
+          fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
+                    "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
+                    "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
+                    "a_i"=Data_Geostat[,'AreaSwept_km2'], 
+                    "getReportCovariance"=FALSE, "getJointPrecision"=TRUE,
+                    lower=-Inf, upper=Inf,
+                    test_fit = FALSE,
+                    fine_scale=fine_scale,
+                    anisotropy=FALSE,
+                    Use_REML=TRUE,
+                    Z_gm = Z_gm,
+                    getsd=FALSE,
+                    newtonsteps=0 # turns off SE estimation
+          ))
+        
         fit = try(
           fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
                     "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
@@ -378,29 +396,27 @@ for(i in 1:length(Regions)){
         
       }
       
-      
       # check that all maximum gradients have an absolute value below 0.01 and the model didn't throw an error 
-      
       if(class(fit)=="try-error" || (!class(fit)=="try-error" &  max(abs(fit$parameter_estimates$diagnostics$final_gradient)) > 0.01)){
         
-        # attempt 3: if fit still failed / didn't converge, it could be because L_beta1_cf or L_beta2_ct is approaching zero; use a different RhoConfig 
+        # attempt 3: if fit still failed / didn't converge, it could be because L_beta1_cf or L_beta2_ct is approaching zero (i.e., estimation problems); start reducing the number of parameters estimated in the model by changing RhoConfig 
         
         # if it's a model, but didn't converge... 
         if(!class(fit)=="try-error") {
           if("L_beta1_cf" %in% fit$parameter_estimates$diagnostics$Param & "L_beta2_ct" %in% fit$parameter_estimates$diagnostics$Param){ # AND if these parameters exist in the model... 
             if(abs(fit$parameter_estimates$par["L_beta1_cf"]) < 0.001) {
-              newRhoConfig = c("Beta1"=3, "Beta2"=4, "Epsilon1"=4, "Epsilon2"=4)
+              newRhoConfig = c("Beta1"=3, "Beta2"=4, "Epsilon1"=4, "Epsilon2"=4) # change beta1 to constant intercept
             }
             if(abs(fit$parameter_estimates$par["L_beta2_ct"]) < 0.001) {
-              newRhoConfig = c("Beta1"=4, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
+              newRhoConfig = c("Beta1"=4, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4) # change beta2 to constant intercept
             }
             if(abs(fit$parameter_estimates$par["L_beta1_cf"]) < 0.001 & 
                abs(fit$parameter_estimates$par["L_beta2_ct"]) < 0.001) {
-              newRhoConfig = c("Beta1"=3, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
+              newRhoConfig = c("Beta1"=3, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4) # change both to constant intercept
             }}
         }
         
-        # if it's an error...
+        # if it's an error... change both to constant intercept
         if(class(fit)=="try-error"){
           newRhoConfig = c("Beta1"=3, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
         }
@@ -423,30 +439,46 @@ for(i in 1:length(Regions)){
                     newtonsteps=1
                     
           ))
-        if(!class(fit)=="try-error"){fit$parameter_estimates$adjustments_for_convergence <- "changed RhoConfig"}
+        if(!class(fit)=="try-error"){fit$parameter_estimates$adjustments_for_convergence <- "changed betas from autoregressive to fixed intercept"}
         
       }
+      # check that all maximum gradients have an absolute value below 0.01 and the model didn't throw an error 
+      if(class(fit)=="try-error" || (!class(fit)=="try-error" &  max(abs(fit$parameter_estimates$diagnostics$final_gradient)) > 0.01)){
+        
+        # attempt 4: set all parameters to random walk or constant intercepts 
+        newRhoConfig = c("Beta1"=3, "Beta2"=3, "Epsilon1"=2, "Epsilon2"=2)
+        fit = try(
+          fit_model("settings"=settings, 
+                    "RhoConfig"= newRhoConfig,
+                    "Lat_i"=Data_Geostat[,'Lat'],
+                    "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
+                    "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
+                    "a_i"=Data_Geostat[,'AreaSwept_km2'], 
+                    "getReportCovariance"=FALSE, "getJointPrecision"=TRUE,
+                    lower=-Inf, upper=Inf,
+                    test_fit = FALSE,
+                    fine_scale=fine_scale,
+                    anisotropy=FALSE,
+                    Use_REML=TRUE,
+                    Z_gm = Z_gm,
+                    getsd=TRUE,
+                    newtonsteps=1
+                    
+          ))
+        if(!class(fit)=="try-error"){fit$parameter_estimates$adjustments_for_convergence <- "changed betas from autoregressive to fixed intercept and epsilons to random walk"}
+        
+      }
+      
+      # final check for convergence
+      if(max(abs(fit$parameter_estimates$diagnostics$final_gradient)) > 0.01) {
+        class(fit) <- "try-error" # if model exists but still fails convergence checks, just write it over as a "try-error" object 
+      }
+      
     }
     
     if(reg=="wc"){
       
-      fit0 =try(
-        fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
-                  "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
-                  "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
-                  "a_i"=Data_Geostat[,'AreaSwept_km2'], 
-                  "getReportCovariance"=FALSE, "getJointPrecision"=TRUE,
-                  lower=-Inf, upper=Inf,
-                  test_fit = FALSE,
-                  fine_scale=fine_scale,
-                  anisotropy=FALSE,
-                  Use_REML=TRUE,
-                  Z_gm = Z_gm,
-                  getsd=FALSE,
-                  newtonsteps=0,
-                  Q_ik=Q_ik # ONLY FOR WEST COAST, adding relative catchability factor the survey the data is from
-        ))
-      
+      # attempt 1: re-run model with all the settings we specified above. if this model has no convergence issues as tested below, it will be the last model we run for this species. 
       fit = try(
         fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
                   "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
@@ -463,9 +495,31 @@ for(i in 1:length(Regions)){
                   newtonsteps=1,
                   Q_ik=Q_ik
         ))
-      if(!class(fit)=="try-error"){fit$parameter_estimates$adjustments_for_convergence <- "none"}
       
+      if(!class(fit)=="try-error"){fit$parameter_estimates$adjustments_for_convergence <- "none"} # annotate what was changed in model, if anything 
+      
+      # check that all maximum gradients have an absolute value below 0.01 (test for convergence) and the model didn't throw an error 
       if(class(fit)=="try-error" || (!class(fit)=="try-error" &  max(abs(fit$parameter_estimates$diagnostics$final_gradient)) > 0.01)){
+        
+        # attempt 2: if attempt 1 didn't work, try estimating parameters without estimating standard errors, and then passing them to fit_model. 
+        
+        #   this should run fine for all species. 
+        fit0 =try(
+          fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
+                    "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
+                    "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
+                    "a_i"=Data_Geostat[,'AreaSwept_km2'], 
+                    "getReportCovariance"=FALSE, "getJointPrecision"=TRUE,
+                    lower=-Inf, upper=Inf,
+                    test_fit = FALSE,
+                    fine_scale=fine_scale,
+                    anisotropy=FALSE,
+                    Use_REML=TRUE,
+                    Z_gm = Z_gm,
+                    getsd=FALSE,
+                    newtonsteps=0,# turns off SE estimation
+                    Q_ik=Q_ik 
+          ))
         
         fit = try(
           fit_model("settings"=settings, "Lat_i"=Data_Geostat[,'Lat'],
@@ -484,26 +538,32 @@ for(i in 1:length(Regions)){
                     parameters=fit0$ParHat,
                     Q_ik=Q_ik
           ))
+        
         if(!class(fit)=="try-error"){fit$parameter_estimates$adjustments_for_convergence <- "used fit0 parameters"}
         
       }
       
+      # check that all maximum gradients have an absolute value below 0.01 and the model didn't throw an error 
       if(class(fit)=="try-error" || (!class(fit)=="try-error" &  max(abs(fit$parameter_estimates$diagnostics$final_gradient)) > 0.01)){
         
-        if(!class(fit)=="try-error"){
-          if("L_beta1_cf" %in% fit$parameter_estimates$diagnostics$Param & "L_beta2_ct" %in% fit$parameter_estimates$diagnostics$Param){
+        # attempt 3: if fit still failed / didn't converge, it could be because L_beta1_cf or L_beta2_ct is approaching zero (i.e., estimation problems); start reducing the number of parameters estimated in the model by changing RhoConfig 
+        
+        # if it's a model, but didn't converge... 
+        if(!class(fit)=="try-error") {
+          if("L_beta1_cf" %in% fit$parameter_estimates$diagnostics$Param & "L_beta2_ct" %in% fit$parameter_estimates$diagnostics$Param){ # AND if these parameters exist in the model... 
             if(abs(fit$parameter_estimates$par["L_beta1_cf"]) < 0.001) {
-              newRhoConfig = c("Beta1"=3, "Beta2"=4, "Epsilon1"=4, "Epsilon2"=4)
+              newRhoConfig = c("Beta1"=3, "Beta2"=4, "Epsilon1"=4, "Epsilon2"=4) # change beta1 to constant intercept
             }
             if(abs(fit$parameter_estimates$par["L_beta2_ct"]) < 0.001) {
-              newRhoConfig = c("Beta1"=4, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
+              newRhoConfig = c("Beta1"=4, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4) # change beta2 to constant intercept
             }
             if(abs(fit$parameter_estimates$par["L_beta1_cf"]) < 0.001 & 
                abs(fit$parameter_estimates$par["L_beta2_ct"]) < 0.001) {
-              newRhoConfig = c("Beta1"=3, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
+              newRhoConfig = c("Beta1"=3, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4) # change both to constant intercept
             }}
-        } 
+        }
         
+        # if it's an error... change both to constant intercept
         if(class(fit)=="try-error"){
           newRhoConfig = c("Beta1"=3, "Beta2"=3, "Epsilon1"=4, "Epsilon2"=4)
         }
@@ -527,24 +587,58 @@ for(i in 1:length(Regions)){
                     Q_ik=Q_ik
                     
           ))
-        if(!class(fit)=="try-error"){fit$parameter_estimates$adjustments_for_convergence <- "changed RhoConfig"}
+        if(!class(fit)=="try-error"){fit$parameter_estimates$adjustments_for_convergence <- "changed betas from autoregressive to fixed intercept"}
+        
+      }
+      # check that all maximum gradients have an absolute value below 0.01 and the model didn't throw an error 
+      if(class(fit)=="try-error" || (!class(fit)=="try-error" &  max(abs(fit$parameter_estimates$diagnostics$final_gradient)) > 0.01)){
+        
+        # attempt 4: set all parameters to random walk or constant intercepts 
+        newRhoConfig = c("Beta1"=3, "Beta2"=3, "Epsilon1"=2, "Epsilon2"=2)
+        fit = try(
+          fit_model("settings"=settings, 
+                    "RhoConfig"= newRhoConfig,
+                    "Lat_i"=Data_Geostat[,'Lat'],
+                    "Lon_i"=Data_Geostat[,'Lon'], "t_i"=Data_Geostat[,'Year'],
+                    "c_i"=rep(0,nrow(Data_Geostat)), "b_i"=Data_Geostat[,'Catch_KG'],
+                    "a_i"=Data_Geostat[,'AreaSwept_km2'], 
+                    "getReportCovariance"=FALSE, "getJointPrecision"=TRUE,
+                    lower=-Inf, upper=Inf,
+                    test_fit = FALSE,
+                    fine_scale=fine_scale,
+                    anisotropy=FALSE,
+                    Use_REML=TRUE,
+                    Z_gm = Z_gm,
+                    getsd=TRUE,
+                    newtonsteps=1,
+                    Q_ik=Q_ik
+                    
+          ))
+        if(!class(fit)=="try-error"){fit$parameter_estimates$adjustments_for_convergence <- "changed betas from autoregressive to fixed intercept and epsilons to random walk"}
         
       }
       
+      # final check for convergence
+      if(max(abs(fit$parameter_estimates$diagnostics$final_gradient)) > 0.01) {
+        class(fit) <- "try-error" # if model exists but still fails convergence checks, just write it over as a "try-error" object 
+      }
     }
     
     
     # save species-specific parameter_estimates 
     if(!class(fit)=="try-error"){
       capture.output( fit$parameter_estimates, file=file.path(paste0(RegionFile,j,"_parameter_estimates",".txt") ))
-    }else{
-      capture.output( fit0$parameter_estimates, file=file.path(paste0(RegionFile,j,"_parameter_estimates_run0",".txt") ))
-      
     }
+    # else{
+    #     capture.output( fit0$parameter_estimates, file=file.path(paste0(RegionFile,j,"_parameter_estimates_run0",".txt") ))
+    
+    #   }
     
     
     # calculate range edges with two methods of estimating SE (only one used in the paper)
     if(!class(fit)=="try-error"){
+      
+      # method of calculating standard errors relative to position along the axis ("absolute") rather than distance from the edge estimate ("relative") no longer used but kept here for reference
       # out_absolute <- try(
       #   get_range_edge( fit.model=fit,
       #                   working_dir=paste0(getwd(),"/"), 
@@ -570,7 +664,7 @@ for(i in 1:length(Regions)){
                         "calculate_relative_to_average" = TRUE)
       )
       
-      # these files are huge, which is why the code to save them is commented out below. density isn't used in the paper, just useful to see and I wanted to keep the method for doing this visible 
+      # these files are huge, which is why the code to save them is commented out below. density isn't used in the paper, just useful to see and I wanted to keep the method for doing this visible for future users
       out_density <- try(
         get_density(fit.model=fit,
                     Years2Include=Years2Include)

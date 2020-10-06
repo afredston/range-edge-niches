@@ -20,7 +20,7 @@ The repository is organized as follows:
 * `scripts` contains all code to analyze or transform data. 
 * `processed-data` contains outputs of scripts that filter, clean, summarize, or analyze data, e.g., a dataframe with the higher taxonomy of species used in the final analysis. 
 * `functions` contains homemade functions called in `scripts`.
-* `figures` contains **code** to produce figures in the manuscript (the outputs are in `results`).
+* `figure-scripts` contains **code** to produce figures in the manuscript (the outputs are in `results`).
 * `results` contains figures, tables, and other outputs that are used in the manuscript. 
 
 There are some additional directories for model outputs that are not version controlled. Large files (e.g., raw temperature datasets), images, and PDFs are not version controlled. 
@@ -42,7 +42,7 @@ Scripts should be run in the following order:
 
 Code to generate figures in the manuscript and supplementary materials can typically be found in the `figure-scripts` folder. A few exceptions: 
 
-* Figure 1 requires the full output from the Bayesian models, which is quite large; those figures are generated at the end of `calculate_edge_thermal_niches.R`. 
+* Figures 1 and 3 require the full output from the Bayesian models, which is quite large, to plot posteriors; those figures are generated at the end of `calculate_edge_thermal_niches.R`. 
 * The figures in Appendix 2 showing how the axes of measurement were developed are generated in `get_axes_of_measurement.R`
 
 ## Computational requirements 
