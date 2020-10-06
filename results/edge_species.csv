@@ -7,7 +7,9 @@ Ammodytes dubius,Warm Edge,Northeast
 Ammodytes dubius,Cold Edge,Northeast
 Anarhichas lupus,Warm Edge,Northeast
 Asterias amurensis,Cold Edge,Eastern Bering Sea
+Atheresthes evermanni,Warm Edge,Eastern Bering Sea
 Atheresthes stomias,Warm Edge,West Coast
+Bathyraja interrupta,Warm Edge,Eastern Bering Sea
 Boltenia ovifera,Cold Edge,Eastern Bering Sea
 Boreogadus saida,Warm Edge,Eastern Bering Sea
 Brevoortia tyrannus,Cold Edge,Northeast
@@ -16,22 +18,26 @@ Buccinum angulosum,Warm Edge,Eastern Bering Sea
 Buccinum polare,Warm Edge,Eastern Bering Sea
 Buccinum scalariforme,Warm Edge,Eastern Bering Sea
 Centropristis striata,Cold Edge,Northeast
-Chionoecetes bairdi,Cold Edge,Eastern Bering Sea
 Chionoecetes opilio,Warm Edge,Eastern Bering Sea
 Clinopegma magnum,Warm Edge,Eastern Bering Sea
+Clupea pallasii,Warm Edge,West Coast
 Clupea pallasii,Cold Edge,Eastern Bering Sea
 Conger oceanicus,Cold Edge,Northeast
+Cryptacanthodes maculatus,Warm Edge,Northeast
 Ctenodiscus crispatus,Warm Edge,Eastern Bering Sea
+Cyclopterus lumpus,Warm Edge,Northeast
 Cynoscion regalis,Cold Edge,Northeast
+Dasycottus setiger,Warm Edge,Eastern Bering Sea
 Dipturus laevis,Warm Edge,Northeast
 Enchelyopus cimbrius,Warm Edge,Northeast
 Eopsetta jordani,Warm Edge,West Coast
-Erimacrus isenbeckii,Cold Edge,Eastern Bering Sea
+Erimacrus isenbeckii,Warm Edge,Eastern Bering Sea
+Eunoe depressa,Warm Edge,Eastern Bering Sea
 Eunoe nodosa,Warm Edge,Eastern Bering Sea
-Fusitriton oregonensis,Cold Edge,Eastern Bering Sea
+Fusitriton oregonensis,Warm Edge,Eastern Bering Sea
 Gadus morhua,Warm Edge,Northeast
 Glyptocephalus cynoglossus,Warm Edge,Northeast
-Gorgonocephalus eucnemis,Warm Edge,Eastern Bering Sea
+Hemilepidotus jordani,Warm Edge,Eastern Bering Sea
 Hemilepidotus jordani,Cold Edge,Eastern Bering Sea
 Hemilepidotus papilio,Warm Edge,Eastern Bering Sea
 Hemitripterus americanus,Warm Edge,Northeast
@@ -40,19 +46,20 @@ Hippoglossoides elassodon,Warm Edge,West Coast
 Hippoglossoides platessoides,Warm Edge,Northeast
 Hippoglossoides robustus,Warm Edge,Eastern Bering Sea
 Hippoglossus hippoglossus,Warm Edge,Northeast
-Hippoglossus stenolepis,Cold Edge,Eastern Bering Sea
+Hippoglossus stenolepis,Cold Edge,West Coast
 Homarus americanus,Warm Edge,Northeast
-Hyas coarctatus,Warm Edge,Eastern Bering Sea
 Hyas coarctatus,Cold Edge,Eastern Bering Sea
 Hyas lyratus,Cold Edge,Eastern Bering Sea
 Icelinus filamentosus,Warm Edge,West Coast
 Icelus spiniger,Warm Edge,Eastern Bering Sea
 Labidochirus splendescens,Warm Edge,Eastern Bering Sea
 Lepidopsetta polyxystra,Cold Edge,Eastern Bering Sea
+Leptagonus frenatus,Warm Edge,Eastern Bering Sea
 Leptasterias arctica,Warm Edge,Eastern Bering Sea
 Leptasterias arctica,Cold Edge,Eastern Bering Sea
 Leptasterias polaris,Warm Edge,Eastern Bering Sea
-Lethasterias nanimensis,Cold Edge,Eastern Bering Sea
+Leptoclinus maculatus,Warm Edge,Eastern Bering Sea
+Lethasterias nanimensis,Warm Edge,Eastern Bering Sea
 Leucoraja erinacea,Warm Edge,Northeast
 Leucoraja ocellata,Warm Edge,Northeast
 Limanda aspera,Cold Edge,Eastern Bering Sea
@@ -74,49 +81,50 @@ Merluccius albidus,Cold Edge,Northeast
 Merluccius bilinearis,Warm Edge,Northeast
 Metacarcinus magister,Warm Edge,West Coast
 Morone saxatilis,Cold Edge,Northeast
+Mustelus canis,Cold Edge,Northeast
 Myoxocephalus jaok,Cold Edge,Eastern Bering Sea
 Myoxocephalus octodecemspinosus,Warm Edge,Northeast
 Myoxocephalus scorpius,Warm Edge,Eastern Bering Sea
 Myoxocephalus scorpius,Cold Edge,Eastern Bering Sea
 Myxine glutinosa,Warm Edge,Northeast
 Neptunea borealis,Warm Edge,Eastern Bering Sea
-Neptunea heros,Warm Edge,Eastern Bering Sea
 Neptunea heros,Cold Edge,Eastern Bering Sea
+Neptunea pribiloffensis,Warm Edge,Eastern Bering Sea
 Neptunea ventricosa,Cold Edge,Eastern Bering Sea
 Occella dodecaedron,Cold Edge,Eastern Bering Sea
 Ophidion marginatum,Cold Edge,Northeast
 Ophiodon elongatus,Warm Edge,West Coast
 Ophiura sarsii,Warm Edge,Eastern Bering Sea
 Oregonia gracilis,Cold Edge,Eastern Bering Sea
+Pagurus aleuticus,Warm Edge,Eastern Bering Sea
 Pagurus aleuticus,Cold Edge,Eastern Bering Sea
 Pagurus capillatus,Cold Edge,Eastern Bering Sea
-Pagurus confragosus,Cold Edge,Eastern Bering Sea
+Pagurus confragosus,Warm Edge,Eastern Bering Sea
 Pagurus ochotensis,Cold Edge,Eastern Bering Sea
 Pagurus rathbuni,Warm Edge,Eastern Bering Sea
-Pagurus trigonocheirus,Cold Edge,Eastern Bering Sea
 Pandalus eous,Warm Edge,Eastern Bering Sea
-Pandalus goniurus,Warm Edge,Eastern Bering Sea
 Pandalus jordani,Warm Edge,West Coast
 Paralichthys dentatus,Cold Edge,Northeast
 Paralithodes camtschaticus,Cold Edge,Eastern Bering Sea
 Paralithodes platypus,Warm Edge,Eastern Bering Sea
 Paralithodes platypus,Cold Edge,Eastern Bering Sea
 Peprilus triacanthus,Cold Edge,Northeast
-Phycis chesteri,Warm Edge,Northeast
+Peristedion miniatum,Cold Edge,Northeast
 Placopecten magellanicus,Warm Edge,Northeast
-Platichthys stellatus,Cold Edge,Eastern Bering Sea
+Platichthys stellatus,Warm Edge,Eastern Bering Sea
 Pleuronectes quadrituberculatus,Cold Edge,Eastern Bering Sea
 Plicifusus kroyeri,Warm Edge,Eastern Bering Sea
+Podothecus accipenserinus,Cold Edge,Eastern Bering Sea
 Pollachius virens,Warm Edge,Northeast
 Pomatomus saltatrix,Cold Edge,Northeast
 Porichthys notatus,Cold Edge,West Coast
 Prionotus carolinus,Cold Edge,Northeast
+Prionotus evolans,Cold Edge,Northeast
 Pteraster obscurus,Warm Edge,Eastern Bering Sea
 Pycnopodia helianthoides,Warm Edge,West Coast
 Raja binoculata,Warm Edge,West Coast
 Raja eglanteria,Cold Edge,Northeast
 Reinhardtius hippoglossoides,Warm Edge,Eastern Bering Sea
-Scomber scombrus,Cold Edge,Northeast
 Scyliorhinus retifer,Cold Edge,Northeast
 Sebastes babcocki,Warm Edge,West Coast
 Sebastes crameri,Warm Edge,West Coast
@@ -126,7 +134,11 @@ Sebastes goodei,Warm Edge,West Coast
 Sebastes goodei,Cold Edge,West Coast
 Sebastes jordani,Cold Edge,West Coast
 Sebastes pinniger,Warm Edge,West Coast
+Sebastes semicinctus,Cold Edge,West Coast
 Squalus suckleyi,Warm Edge,West Coast
+Squatina dumeril,Cold Edge,Northeast
+Stenotomus chrysops,Cold Edge,Northeast
+Strongylocentrotus droebachiensis,Warm Edge,Eastern Bering Sea
 Styela rustica,Warm Edge,Eastern Bering Sea
 Styela rustica,Cold Edge,Eastern Bering Sea
 Tautogolabrus adspersus,Warm Edge,Northeast
