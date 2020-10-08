@@ -34,8 +34,6 @@ FieldConfig = c("Omega1"=0, # spatial variation in first linear predictor (encou
                 "Epsilon2"=1 # spatiotemporal variation in same
 )
 
-## AJA - Great short and sweet explanation for settings selection!
-
 # specify model structure; note that when models do not converge, we sequentially reduce the number of parameters being estimated by setting some of these parameters to 1
 RhoConfig = c("Beta1"=4, # "autoregressive"; intercept estimated as a fixed effect
               "Beta2"=4, # "autoregressive"; intercept estimated as a fixed effect
@@ -43,15 +41,12 @@ RhoConfig = c("Beta1"=4, # "autoregressive"; intercept estimated as a fixed effe
               "Epsilon2"=4 # "autoregressive";  autocorrelation in temporal variation  estimated as a fixed effect
 ) #### FLAG: setting these to 4 is termed a fixed effect in the VAST manual and a random effect in the documentation for make_data.
 
-## AJA - I'm there with you on the FLAGGED note. If possible, it'd be great to clear this up before submitting. That said, I don't think it is entirely crucial and the few people that get this far in the weeds of the model structure would likely reach out to you/Jim for clarity. For what it's worth, I was definitely under the impression that placing the autoregressive structure on intercept or temporal variation meant you were in the random effect camp. Although, I feel like the more I learn the more questions I have about this model :)
-
 OverdispersionConfig = c("Eta1"=0, "Eta2"=0) # turning off vessel-level catchability factors 
 ObsModel = c(2,1) # specifies functional form of encounter probabilities--here, lognormal
 
 Options =  c("Calculate_Range"=1) # turn on range calculations
 
-# strata.limits <- data.frame('STRATA'="All_areas")
-## AJA - Just a note here to see if this is commented out because each region has its own strata.limits or if there was another reason? Going through the code, thinking some more, is this not used because you are focusing on distribution characteristics and not "strata" or "area weighted" density/pop estimates?
+strata.limits <- data.frame('STRATA'="All_areas")
 
 Species_set = 100 # max number of species to download in a region (ranked by frequency)
 
@@ -144,11 +139,9 @@ for(i in 1:length(Regions)){
   ########################
   
   # bind together all the model settings we specified earlier
-  settings = make_settings( "n_x"=n_x, "Region"=Region, purpose="index", bias.correct=FALSE, use_anisotropy=FALSE,
+  settings = make_settings( "n_x"=n_x, "Region"=Region, purpose="index", bias.correct=FALSE, use_anisotropy=FALSE, # turned off to help with model fitting 
                             "FieldConfig"=FieldConfig, "RhoConfig"=RhoConfig, "OverdispersionConfig"=OverdispersionConfig,
                             "Options"=Options,"ObsModel"=ObsModel  )
-  
-  ## AJA - Just a question that might come up in review: curious why anisotropy was set to false instead of true here?
   
   # derived objects that are constant among all models in a region
   Year_Set <- sort(unique(Catch_rates$Year))
@@ -197,7 +190,7 @@ for(i in 1:length(Regions)){
   ########################
   
   detectCores()
-  registerDoParallel(36) # UPDATE FOR YOUR OWN MACHINE
+  registerDoParallel(18) # UPDATE FOR YOUR OWN MACHINE
   
   foreach(j = Species_list) %dopar%{
     library(VAST)
@@ -226,12 +219,10 @@ for(i in 1:length(Regions)){
     
     Years2Include <- sort(unique(Data_Geostat$Year))
     
-    # Pad first years
+    # Pad first years so that the model doesn't start prediction in the first year of real data (lets it get up and running so there isn't weird transient behavior in year 1)
     Data_Placeholder = Data_Geostat[1:5,c('Year','Catch_KG','AreaSwept_km2','Lat','Lon')]
     Data_Placeholder[,'Catch_KG'] = NA
     Data_Placeholder[,'Year'] = min(Data_Placeholder[,'Year']) - 5:1
-    
-    ## AJA - Not entirely clear to me why the padding is done here. Maybe add some quick explanation, like you do on the next comment for Q_ik?
     
     # separate WC again to preserve Survey column for Q_ik
     if(reg %in% c('neus','ebs')){
@@ -265,8 +256,6 @@ for(i in 1:length(Regions)){
     ########################
     
     # Z_gm is the VAST matrix that specifies the spatial axes along which biomass is estimated. here, we're extracting it, converting it from northings/eastings to lon/lat, merging it with the axes of measurement we already generated for each region, and then combining the whole thing back into Z_gm so that VAST will estimate biomass along the axes of measurement in addition to northings/eastings. 
-    
-    ## AJA - This is so cool!!
     
     # if Z_gm matrix does not exist yet, generate it and save it 
     if (!file.exists(Z_gmFile) & reg %in% c('neus','wc')){
@@ -458,7 +447,6 @@ for(i in 1:length(Regions)){
         
         # attempt 4: set all parameters to random walk or constant intercepts
         
-        ## AJA - Again potential review/curiosity question: with epsilon you went from AR to RW. Is there a reason why for Beta you went from AR to Constant instead of AR to RW?
         newRhoConfig = c("Beta1"=3, "Beta2"=3, "Epsilon1"=2, "Epsilon2"=2)
         fit = try(
           fit_model("settings"=settings, 
@@ -698,7 +686,7 @@ for(i in 1:length(Regions)){
     # not saving this right now because each df for each species is ~1M rows, but keeping the code so anyone running line-by-line can easily access the density df
     
     
-  }
+  }# end of parallel
   
   ########################
   ###  save outputs
@@ -722,6 +710,6 @@ for(i in 1:length(Regions)){
   saveRDS(spp_not_converged, paste0(RegionFile, "spp_not_converged.rds"))
   
   
-}# end of parallel
+}
 
 
