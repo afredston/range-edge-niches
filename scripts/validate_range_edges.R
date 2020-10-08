@@ -7,6 +7,7 @@ library(here)
 buffer_amount <- 0.10 # what fraction of the total axis length is "too close" to the region edge on either side? if 0.05, range edges need to be in the middle 90% of the region 
 SEoptions <- c("relative","absolute")
 SEtype <- SEoptions[1]
+quantiles_to_use <- c('quantile_0.01','quantile_0.99')
 
 ##################
 # import and harmonize species dfs
@@ -22,7 +23,7 @@ ebs.vast <- if(SEtype=="relative"){readRDS(here("processed-data","ebs_relative_S
 }else{readRDS(here("processed-data","ebs_absolute_SE_vast_edge_df.rds"))} 
 
 ebs.df <- ebs.vast %>%
-  filter(!quantile=="quantile_0.5") %>% # get rid of centroid 
+  filter(quantile %in% quantiles_to_use) %>% # get rid of centroid, other quantiles
   mutate(species = gsub("_", " ", species),
          species=tolower(species)) %>% # harmonize name format 
   pivot_wider(names_from=quantity, values_from=value ) %>%
@@ -32,7 +33,7 @@ neus.vast <- if(SEtype=="relative"){readRDS(here("processed-data","neus_relative
 }else{readRDS(here("processed-data","neus_absolute_SE_vast_edge_df.rds"))}
 
 neus.df <- neus.vast %>%
-  filter(!quantile=="quantile_0.5") %>%
+  filter(quantile %in% quantiles_to_use) %>%
   mutate(species = gsub("_", " ", species),
          species=tolower(species)) %>%
   pivot_wider(names_from=quantity, values_from=value ) %>%
@@ -42,7 +43,7 @@ wc.vast <- if(SEtype=="relative"){readRDS(here("processed-data","wc_relative_SE_
 }else{readRDS(here("processed-data","wc_absolute_SE_vast_edge_df.rds"))} 
 
 wc.df <- wc.vast %>%
-  filter(!quantile=="quantile_0.5") %>%
+  filter(quantile %in% quantiles_to_use) %>%
   mutate(species = gsub("_", " ", species),
          species=tolower(species)) %>%
   pivot_wider(names_from=quantity, values_from=value ) %>%
@@ -70,7 +71,7 @@ wc.buffer = wc.axislen*buffer_amount
 # identify range edge species along relevant axis 
 ebs.nw.edges <- ebs.df %>%
   filter(axis=="line_km",
-         quantile%in%c("quantile_0.99","quantile_0.01")) %>%
+         quantile %in% quantiles_to_use) %>%
   group_by(species, quantile) %>%
   mutate(meanedge = mean(Estimate)) %>%
   ungroup() %>%
@@ -82,7 +83,7 @@ ebs.nw.edges <- ebs.df %>%
 
 neus.coast.edges <- neus.df %>%
   filter(axis=="coast_km",
-         quantile%in%c("quantile_0.99","quantile_0.01")) %>%
+         quantile %in% quantiles_to_use) %>%
   group_by(species, quantile) %>%
   mutate(meanedge = mean(Estimate)) %>%
   ungroup() %>%
@@ -94,7 +95,7 @@ neus.coast.edges <- neus.df %>%
 
 wc.coast.edges <- wc.df %>%
   filter(axis=="coast_km",
-         quantile%in%c("quantile_0.99","quantile_0.01")) %>%
+         quantile %in% quantiles_to_use) %>%
   group_by(species, quantile) %>%
   mutate(meanedge = mean(Estimate)) %>%
   ungroup() %>%
@@ -106,57 +107,54 @@ wc.coast.edges <- wc.df %>%
 
 # which species have which edges?
 wc.coast.pol.spp <- wc.coast.edges %>%
-  filter(quantile=="quantile_0.99") %>%
+  filter(quantile==quantiles_to_use[2]) %>%
   pull(unique(species)) 
 
 wc.coast.eq.spp <- wc.coast.edges %>%
-  filter(quantile=="quantile_0.01") %>%
+  filter(quantile==quantiles_to_use[1]) %>%
   pull(unique(species))
 
 neus.coast.pol.spp <- neus.coast.edges %>%
-  filter(quantile=="quantile_0.99") %>%
+  filter(quantile==quantiles_to_use[2]) %>%
   pull(unique(species))
 
 neus.coast.eq.spp <- neus.coast.edges %>%
-  filter(quantile=="quantile_0.01") %>%
+  filter(quantile==quantiles_to_use[1]) %>%
   pull(unique(species))
 
 ebs.nw.pol.spp <- ebs.nw.edges %>%
-  filter(quantile=="quantile_0.99") %>%
+  filter(quantile==quantiles_to_use[2]) %>%
   pull(unique(species))
 
 ebs.nw.eq.spp <- ebs.nw.edges %>%
-  filter(quantile=="quantile_0.01") %>%
+  filter(quantile==quantiles_to_use[1]) %>%
   pull(unique(species))
 
 # label edges by edge type, and keep only estimates of the relevant quantile (e.g., throw out 0.05 quantile for cold edges)
 ebs.prep <- ebs.df %>% 
   mutate(region="ebs") %>% # add columns for binding later 
-  filter(!quantile=="quantile_0.5") %>%
   rowwise() %>%
   mutate(edgetype=ifelse(species %in% ebs.nw.pol.spp & species %in% ebs.nw.eq.spp, "both", ifelse(species %in% ebs.nw.pol.spp, "coldedge", ifelse(species%in% ebs.nw.eq.spp, "warmedge", "neither")))) %>%
   filter(!edgetype=="neither") %>% # keep only rows with estimates from the range edge, whichever it is
-  mutate(ref = ifelse(edgetype=="coldedge" & quantile=="quantile_0.99", "keep", ifelse(edgetype=="warmedge" & quantile=="quantile_0.01","keep",ifelse(edgetype=="both","keep","drop")))) %>%
+  mutate(ref = ifelse(edgetype=="coldedge" & quantile==quantiles_to_use[2], "keep", ifelse(edgetype=="warmedge" & quantile==quantiles_to_use[1],"keep",ifelse(edgetype=="both","keep","drop")))) %>% # match the edge type with the correct quantile--we did calculate 0.01 and 0.99 quantiles for each range, but only want to keep 0.01 for warm edges and 0.99 for cold edges 
   filter(ref=="keep") %>%
   select(-ref)
 
 neus.prep <- neus.df %>% 
   mutate(region="neus") %>%
-  filter(!quantile=="quantile_0.5") %>%
   rowwise() %>%
   mutate(edgetype=ifelse(species %in% neus.coast.pol.spp & species %in% neus.coast.eq.spp, "both", ifelse(species %in% neus.coast.pol.spp, "coldedge", ifelse(species%in% neus.coast.eq.spp, "warmedge", "neither")))) %>%
   filter(!edgetype=="neither") %>% 
-  mutate(ref = ifelse(edgetype=="coldedge" & quantile=="quantile_0.99", "keep", ifelse(edgetype=="warmedge" & quantile=="quantile_0.01","keep",ifelse(edgetype=="both","keep","drop")))) %>% 
+  mutate(ref = ifelse(edgetype=="coldedge" & quantile==quantiles_to_use[2], "keep", ifelse(edgetype=="warmedge" & quantile==quantiles_to_use[1],"keep",ifelse(edgetype=="both","keep","drop")))) %>%
   filter(ref=="keep") %>%
   select(-ref)
 
 wc.prep <- wc.df %>% 
   mutate(region="wc")%>%
-  filter(!quantile=="quantile_0.5") %>%
   rowwise() %>%
   mutate(edgetype=ifelse(species %in% wc.coast.pol.spp & species %in% wc.coast.eq.spp, "both", ifelse(species %in% wc.coast.pol.spp, "coldedge", ifelse(species%in% wc.coast.eq.spp, "warmedge", "neither")))) %>%
   filter(!edgetype=="neither") %>% 
-  mutate(ref = ifelse(edgetype=="coldedge" & quantile=="quantile_0.99", "keep", ifelse(edgetype=="warmedge" & quantile=="quantile_0.01","keep",ifelse(edgetype=="both","keep","drop")))) %>%
+  mutate(ref = ifelse(edgetype=="coldedge" & quantile==quantiles_to_use[2], "keep", ifelse(edgetype=="warmedge" & quantile==quantiles_to_use[1],"keep",ifelse(edgetype=="both","keep","drop")))) %>%
   filter(ref=="keep") %>%
   select(-ref)
 
