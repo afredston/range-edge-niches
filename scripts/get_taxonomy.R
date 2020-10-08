@@ -23,6 +23,12 @@ neus.spplist <- c(unique(neus.vast$species)) %>% tolower() %>% str_replace_all("
 wc.spplist <- c(unique(wc.vast$species)) %>% tolower() %>% str_replace_all("_", " ")
 ebs.spplist <- c(unique(ebs.vast$species)) %>% tolower() %>% str_replace_all("_", " ")
 
+# check for overlap and get total number stats
+intersect(neus.spplist, wc.spplist)
+intersect(neus.spplist, ebs.spplist)
+intersect(wc.spplist, ebs.spplist)
+length(unique(c(neus.spplist, wc.spplist, ebs.spplist)))
+
 # get higher taxonomy with taxize
 
 neus.tax <- rbind(classification(neus.spplist, db="worms")) %>%

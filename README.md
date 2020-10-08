@@ -36,7 +36,7 @@ Scripts should be run in the following order:
 1. `validate_range_edges.R` filters the VAST output for only range edges that actually fall in the study region, based on passing certain filters. This needs to be re-run every time VAST is re-run in `get_range_edges.R` 
 1. `prep_sst.R` fetches historical SST data from the [NOAA ERDDAP server](https://coastwatch.pfeg.noaa.gov/erddap/index.html) for each region, crops rasters to the extent of a bathymetric mask for each region that is also created in this script, performs a mean bias correction to combine different SST datasets, and writes the SST data out as dataframes. This does not need to be repeated unless the source data is updated
 1. `match_sst_to_axis.R` matches SST values to points along the axis of range limit measurement for each study region, and combines SST datasets where necessary. This doesn't need to be re-run if new edges are generated, because it takes as input the VAST coordinates, not the range edge positions.
-1. `calculate_edge_thermal_niches.R` fits Bayesian models to range edges and edge thermal niches. This script was developed on a remote server and may overwhelm personal computers' processing capacity.  
+1. `calculate_edge_thermal_niches.R` fits Bayesian models to range edges and edge thermal niches. DANGER: this script was developed on a remote server and may overwhelm personal computers' processing capacity.  
 1. `analyze_range_edges.R` conducts the main analyses in the paper. 
 1. `paper_stats.R` calculates miscellaneous statistical results reported in the manuscript. 
 
