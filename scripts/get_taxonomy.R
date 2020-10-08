@@ -1,4 +1,6 @@
 # get higher taxonomy of species found in trawl surveys
+# because of how taxize works with WORMS, you can't just hit run on this script--it needs manual input when there are multiple taxonomic records
+# I just select the one labeled "accepted" when prompted
 
 ## load packages and data 
 library(tidyverse)

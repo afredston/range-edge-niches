@@ -5,6 +5,7 @@ alosa sapidissima,Actinopterygii,Clupeidae,Alosa,Clupeiformes,Chordata,Alosa sap
 amblyraja radiata,Elasmobranchii,Rajidae,Amblyraja,Rajiformes,Chordata,Amblyraja radiata,Northeast
 ammodytes dubius,Actinopterygii,Ammodytidae,Ammodytes,Perciformes,Chordata,Ammodytes dubius,Northeast
 anarhichas lupus,Actinopterygii,Anarhichadidae,Anarhichas,Perciformes,Chordata,Anarhichas lupus,Northeast
+anchoa mitchilli,Actinopterygii,Engraulidae,Anchoa,Clupeiformes,Chordata,Anchoa mitchilli,Northeast
 argentina silus,Actinopterygii,Argentinidae,Argentina,Argentiniformes,Chordata,Argentina silus,Northeast
 brevoortia tyrannus,Actinopterygii,Clupeidae,Brevoortia,Clupeiformes,Chordata,Brevoortia tyrannus,Northeast
 brosme brosme,Actinopterygii,Lotidae,Brosme,Gadiformes,Chordata,Brosme brosme,Northeast
@@ -17,7 +18,6 @@ clupea harengus,Actinopterygii,Clupeidae,Clupea,Clupeiformes,Chordata,Clupea har
 conger oceanicus,Actinopterygii,Congridae,Conger,Anguilliformes,Chordata,Conger oceanicus,Northeast
 cryptacanthodes maculatus,Actinopterygii,Cryptacanthodidae,Cryptacanthodes,Perciformes,Chordata,Cryptacanthodes maculatus,Northeast
 cyclopterus lumpus,Actinopterygii,Cyclopteridae,Cyclopterus,Scorpaeniformes,Chordata,Cyclopterus lumpus,Northeast
-cynoscion regalis,Actinopterygii,Sciaenidae,Cynoscion,Perciformes,Chordata,Cynoscion regalis,Northeast
 dipturus laevis,Elasmobranchii,Rajidae,Dipturus,Rajiformes,Chordata,Dipturus laevis,Northeast
 enchelyopus cimbrius,Actinopterygii,Lotidae,Enchelyopus,Gadiformes,Chordata,Enchelyopus cimbrius,Northeast
 gadus morhua,Actinopterygii,Gadidae,Gadus,Gadiformes,Chordata,Gadus morhua,Northeast
@@ -31,6 +31,7 @@ illex illecebrosus,Cephalopoda,Ommastrephidae,Illex,Oegopsida,Mollusca,Illex ill
 leiostomus xanthurus,Actinopterygii,Sciaenidae,Leiostomus,Perciformes,Chordata,Leiostomus xanthurus,Northeast
 lepophidium profundorum,Actinopterygii,Ophidiidae,Lepophidium,Ophidiiformes,Chordata,Lepophidium profundorum,Northeast
 leucoraja erinacea,Elasmobranchii,Rajidae,Leucoraja,Rajiformes,Chordata,Leucoraja erinacea,Northeast
+leucoraja garmani,Elasmobranchii,Rajidae,Leucoraja,Rajiformes,Chordata,Leucoraja garmani,Northeast
 leucoraja ocellata,Elasmobranchii,Rajidae,Leucoraja,Rajiformes,Chordata,Leucoraja ocellata,Northeast
 limulus polyphemus,Merostomata,Limulidae,Limulus,Xiphosurida,Arthropoda,Limulus polyphemus,Northeast
 loligo pealeii,Cephalopoda,Loliginidae,Loligo,Myopsida,Mollusca,Loligo pealeii,Northeast
@@ -57,6 +58,7 @@ pomatomus saltatrix,Actinopterygii,Pomatomidae,Pomatomus,Perciformes,Chordata,Po
 prionotus carolinus,Actinopterygii,Triglidae,Prionotus,Scorpaeniformes,Chordata,Prionotus carolinus,Northeast
 prionotus evolans,Actinopterygii,Triglidae,Prionotus,Scorpaeniformes,Chordata,Prionotus evolans,Northeast
 raja eglanteria,Elasmobranchii,Rajidae,Raja,Rajiformes,Chordata,Raja eglanteria,Northeast
+scomber scombrus,Actinopterygii,Scombridae,Scomber,Perciformes,Chordata,Scomber scombrus,Northeast
 scophthalmus aquosus,Actinopterygii,Scophthalmidae,Scophthalmus,Pleuronectiformes,Chordata,Scophthalmus aquosus,Northeast
 scyliorhinus retifer,Elasmobranchii,Scyliorhinidae,Scyliorhinus,Carcharhiniformes,Chordata,Scyliorhinus retifer,Northeast
 sebastes fasciatus,Actinopterygii,Sebastidae,Sebastes,Scorpaeniformes,Chordata,Sebastes fasciatus,Northeast
@@ -73,6 +75,7 @@ aforia circinata,Gastropoda,Cochlespiridae,Aforia,Neogastropoda,Mollusca,Aforia 
 asterias amurensis,Asteroidea,Asteriidae,Asterias,Forcipulatida,Echinodermata,Asterias amurensis,Eastern Bering Sea
 atheresthes evermanni,Actinopterygii,Pleuronectidae,Atheresthes,Pleuronectiformes,Chordata,Atheresthes evermanni,Eastern Bering Sea
 atheresthes stomias,Actinopterygii,Pleuronectidae,Atheresthes,Pleuronectiformes,Chordata,Atheresthes stomias,Eastern Bering Sea
+bathymaster signatus,Actinopterygii,Bathymasteridae,Bathymaster,Perciformes,Chordata,Bathymaster signatus,Eastern Bering Sea
 bathyraja interrupta,Elasmobranchii,Arhynchobatidae,Bathyraja,Rajiformes,Chordata,Bathyraja interrupta,Eastern Bering Sea
 bathyraja parmifera,Elasmobranchii,Arhynchobatidae,Bathyraja,Rajiformes,Chordata,Bathyraja parmifera,Eastern Bering Sea
 boltenia ovifera,Ascidiacea,Pyuridae,Boltenia,Stolidobranchia,Chordata,Boltenia ovifera,Eastern Bering Sea
@@ -91,6 +94,7 @@ erimacrus isenbeckii,Malacostraca,Cheiragonidae,Erimacrus,Decapoda,Arthropoda,Er
 eunoe depressa,Polychaeta,Polynoidae,Eunoe,Phyllodocida,Annelida,Eunoe depressa,Eastern Bering Sea
 eunoe nodosa,Polychaeta,Polynoidae,Eunoe,Phyllodocida,Annelida,Eunoe nodosa,Eastern Bering Sea
 fusitriton oregonensis,Gastropoda,Cymatiidae,Fusitriton,Littorinimorpha,Mollusca,Fusitriton oregonensis,Eastern Bering Sea
+gadus chalcogrammus,Actinopterygii,Gadidae,Gadus,Gadiformes,Chordata,Gadus chalcogrammus,Eastern Bering Sea
 gadus macrocephalus,Actinopterygii,Gadidae,Gadus,Gadiformes,Chordata,Gadus macrocephalus,Eastern Bering Sea
 glyptocephalus zachirus,Actinopterygii,Pleuronectidae,Glyptocephalus,Pleuronectiformes,Chordata,Glyptocephalus zachirus,Eastern Bering Sea
 gorgonocephalus eucnemis,Ophiuroidea,Gorgonocephalidae,Gorgonocephalus,Euryalida,Echinodermata,Gorgonocephalus eucnemis,Eastern Bering Sea
@@ -159,7 +163,6 @@ clupea pallasii,Actinopterygii,Clupeidae,Clupea,Clupeiformes,Chordata,Clupea pal
 eopsetta jordani,Actinopterygii,Pleuronectidae,Eopsetta,Pleuronectiformes,Chordata,Eopsetta jordani,West Coast
 glyptocephalus zachirus,Actinopterygii,Pleuronectidae,Glyptocephalus,Pleuronectiformes,Chordata,Glyptocephalus zachirus,West Coast
 hippoglossoides elassodon,Actinopterygii,Pleuronectidae,Hippoglossoides,Pleuronectiformes,Chordata,Hippoglossoides elassodon,West Coast
-hippoglossus stenolepis,Actinopterygii,Pleuronectidae,Hippoglossus,Pleuronectiformes,Chordata,Hippoglossus stenolepis,West Coast
 hydrolagus colliei,Holocephali,Chimaeridae,Hydrolagus,Chimaeriformes,Chordata,Hydrolagus colliei,West Coast
 icelinus filamentosus,Actinopterygii,Cottidae,Icelinus,Scorpaeniformes,Chordata,Icelinus filamentosus,West Coast
 liponema brevicornis,Anthozoa,Liponematidae,Liponema,Actiniaria,Cnidaria,Liponema brevicornis,West Coast
