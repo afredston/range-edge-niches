@@ -6,7 +6,9 @@ edge.spp.dat <- readRDS(here("processed-data","all_edge_spp_df.rds"))%>%
   ungroup() %>% # undo rowwise nature
   mutate(axis = as.character(axis)) # convert from factor
 
+#####
 # make example plots for methods schematic 
+#####
 ex.spp.ebs <- "paralithodes camtschaticus" # red king crab
 ex.spp.neus <- "gadus morhua" # atlantic cod
 ex.spp.wc <- "sebastes pinniger" # canary rockfish
@@ -62,63 +64,175 @@ ggsave(ex.gg.neus, dpi=600, width=1.5, height=1.5, filename=here("results",paste
 ggsave(ex.gg.wc, dpi=600, width=1.5, height=1.5, filename=here("results",paste0("example_edge_",ex.spp.wc,".png")), scale=1.5)
 
 
-#### plots for all species, for supplement
+#####
+# plot cold edges over time, both 0.01 and 0.05 quantiles (for supplement)
+#####
 
-neus.gg <- edge.spp.dat %>%
-  filter(region=="neus",
-         axis=="coast_km") %>%
-  mutate(quantile = recode(quantile, "quantile_0.99"="Poleward Edge",
-                           "quantile_0.01"="Equatorward Edge"),
+# need to pull in the original dfs because edge.spp.dat only has 0.99 and 0.01 quantiles 
+# some code to harmonize name format because this is the raw VAST output
+
+# get edge positions with comparison quantile 
+neus05 <- readRDS(here("processed-data","neus_relative_SE_vast_edge_df.rds")) %>% 
+  filter(quantile=="quantile_0.05",axis=="coast_km") %>%  
+  mutate(species = gsub("_", " ", species),
+         species=tolower(species)) %>%
+  pivot_wider(names_from=quantity, values_from=value ) %>%
+  rename("Std.Error"=`Std. Error`) %>% 
+  filter(species %in% edge.spp.dat[edge.spp.dat$region=="neus" & edge.spp.dat$quantile=="quantile_0.01",]$species)  
+
+# plot the edge positions we used against the other metric for warm edges 
+neus.eq.gg <- edge.spp.dat %>% 
+  filter(region=="neus", quantile=="quantile_0.01",axis=="coast_km") %>% 
+  full_join(neus05) %>% 
+  mutate(quantile = recode(quantile, "quantile_0.01"="Quantile=0.01",
+                           "quantile_0.05"="Quantile=0.05"),
+         species = str_to_sentence(species)) %>%
+  ggplot(aes(x=year, y=Estimate, group=quantile, color=quantile)) +
+  geom_point() +
+  geom_line() +
+  geom_errorbar(aes(ymin=Estimate-Std.Error, ymax=Estimate+Std.Error, group=quantile, color=quantile)) +
+  scale_color_manual(values=c("black","grey")) +
+  facet_wrap(~species, ncol=4)+
+  labs(x="Year", y="Coastal Distance (km)") +
+  theme_bw() +
+  theme( axis.text.x = element_text(angle = 90, hjust = 1), legend.position="bottom", legend.title = element_blank())+
+  NULL
+neus.eq.gg
+
+neus95 <- readRDS(here("processed-data","neus_relative_SE_vast_edge_df.rds")) %>% 
+  filter(quantile=="quantile_0.95",axis=="coast_km") %>%  
+  mutate(species = gsub("_", " ", species),
+         species=tolower(species)) %>%
+  pivot_wider(names_from=quantity, values_from=value ) %>%
+  rename("Std.Error"=`Std. Error`) %>% 
+  filter(species %in% edge.spp.dat[edge.spp.dat$region=="neus" & edge.spp.dat$quantile=="quantile_0.99",]$species)  
+
+# same for cold edges
+neus.pol.gg <- edge.spp.dat %>% 
+  filter(region=="neus", quantile=="quantile_0.99",axis=="coast_km") %>% 
+  full_join(neus95) %>% 
+  mutate(quantile = recode(quantile, "quantile_0.99"="Quantile=0.99",
+                           "quantile_0.95"="Quantile=0.95"),
          species = str_to_sentence(species)) %>%
   ggplot(aes(x=year, y=Estimate, group=quantile, color=quantile)) +
   geom_point() +
   geom_line() +
   geom_errorbar(aes(ymin=Estimate-Std.Error, ymax=Estimate+Std.Error, group=quantile, color=quantile)) +
   scale_color_manual(values=c("grey","black")) +
-  facet_wrap(~species, ncol=5)+
-  theme(legend.position = "none") +
+  facet_wrap(~species, ncol=4)+
   labs(x="Year", y="Coastal Distance (km)") +
   theme_bw() +
-  theme( axis.text.x = element_text(angle = 90, hjust = 1), legend.position="bottom")+
+  theme( axis.text.x = element_text(angle = 90, hjust = 1), legend.position="bottom", legend.title = element_blank())+
   NULL
-neus.gg
-ggsave(neus.gg, filename=here("results","VAST_edges_neus.png"),height=10.5,width=8.25,dpi=160, scale=1.1)
+neus.pol.gg
 
-ebs.gg <- edge.spp.dat %>%
-  filter(region=="ebs",
-         axis=="line_km") %>%
-  mutate(quantile = recode(quantile, "quantile_0.99"="Poleward Edge",
-                           "quantile_0.01"="Equatorward Edge"),
-         species = str_to_sentence(species)) %>% 
+wc05 <- readRDS(here("processed-data","wc_relative_SE_vast_edge_df.rds")) %>% 
+  filter(quantile=="quantile_0.05",axis=="coast_km") %>%  
+  mutate(species = gsub("_", " ", species),
+         species=tolower(species)) %>%
+  pivot_wider(names_from=quantity, values_from=value ) %>%
+  rename("Std.Error"=`Std. Error`) %>% 
+  filter(species %in% edge.spp.dat[edge.spp.dat$region=="wc" & edge.spp.dat$quantile=="quantile_0.01",]$species)  
+
+wc.eq.gg <- edge.spp.dat %>% 
+  filter(region=="wc", quantile=="quantile_0.01",axis=="coast_km") %>% 
+  full_join(wc05) %>% 
+  mutate(quantile = recode(quantile, "quantile_0.01"="Quantile=0.01",
+                           "quantile_0.05"="Quantile=0.05"),
+         species = str_to_sentence(species)) %>%
   ggplot(aes(x=year, y=Estimate, group=quantile, color=quantile)) +
   geom_point() +
-  geom_line() + 
-  geom_errorbar(aes(ymin=Estimate-Std.Error, ymax=Estimate+Std.Error, group=quantile, color=quantile)) + 
+  geom_line() +
+  geom_errorbar(aes(ymin=Estimate-Std.Error, ymax=Estimate+Std.Error, group=quantile, color=quantile)) +
+  scale_color_manual(values=c("black","grey")) +
+  facet_wrap(~species, ncol=3)+
+  labs(x="Year", y="Coastal Distance (km)") +
+  theme_bw() +
+  theme( axis.text.x = element_text(angle = 90, hjust = 1), legend.position="bottom", legend.title = element_blank())+
+  NULL
+wc.eq.gg
+
+wc95 <- readRDS(here("processed-data","wc_relative_SE_vast_edge_df.rds")) %>% 
+  filter(quantile=="quantile_0.95",axis=="coast_km") %>%  
+  mutate(species = gsub("_", " ", species),
+         species=tolower(species)) %>%
+  pivot_wider(names_from=quantity, values_from=value ) %>%
+  rename("Std.Error"=`Std. Error`) %>% 
+  filter(species %in% edge.spp.dat[edge.spp.dat$region=="wc" & edge.spp.dat$quantile=="quantile_0.99",]$species)  
+
+wc.pol.gg <- edge.spp.dat %>% 
+  filter(region=="wc", quantile=="quantile_0.99",axis=="coast_km") %>% 
+  full_join(wc95) %>% 
+  mutate(quantile = recode(quantile, "quantile_0.99"="Quantile=0.99",
+                           "quantile_0.95"="Quantile=0.95"),
+         species = str_to_sentence(species)) %>%
+  ggplot(aes(x=year, y=Estimate, group=quantile, color=quantile)) +
+  geom_point() +
+  geom_line() +
+  geom_errorbar(aes(ymin=Estimate-Std.Error, ymax=Estimate+Std.Error, group=quantile, color=quantile)) +
   scale_color_manual(values=c("grey","black")) +
-  facet_wrap(~species, ncol=6)+
-  theme(legend.position = "none") +
+  facet_wrap(~species, ncol=3)+
+  labs(x="Year", y="Coastal Distance (km)") +
+  theme_bw() +
+  theme( axis.text.x = element_text(angle = 90, hjust = 1), legend.position="bottom", legend.title = element_blank())+
+  NULL
+wc.pol.gg
+
+ebs05 <- readRDS(here("processed-data","ebs_relative_SE_vast_edge_df.rds")) %>% 
+  filter(quantile=="quantile_0.05",axis=="line_km") %>%  
+  mutate(species = gsub("_", " ", species),
+         species=tolower(species)) %>%
+  pivot_wider(names_from=quantity, values_from=value ) %>%
+  rename("Std.Error"=`Std. Error`) %>% 
+  filter(species %in% edge.spp.dat[edge.spp.dat$region=="ebs" & edge.spp.dat$quantile=="quantile_0.01",]$species)  
+
+ebs.eq.gg <- edge.spp.dat %>% 
+  filter(region=="ebs", quantile=="quantile_0.01",axis=="line_km") %>% 
+  full_join(ebs05) %>% 
+  mutate(quantile = recode(quantile, "quantile_0.01"="Quantile=0.01",
+                           "quantile_0.05"="Quantile=0.05"),
+         species = str_to_sentence(species)) %>%
+  ggplot(aes(x=year, y=Estimate, group=quantile, color=quantile)) +
+  geom_point() +
+  geom_line() +
+  geom_errorbar(aes(ymin=Estimate-Std.Error, ymax=Estimate+Std.Error, group=quantile, color=quantile)) +
+  scale_color_manual(values=c("black","grey")) +
+  facet_wrap(~species, ncol=4)+
   labs(x="Year", y="Middle Domain Axis (km)") +
   theme_bw() +
-  theme( axis.text.x = element_text(angle = 90, hjust = 1), legend.position="bottom")+
+  theme( axis.text.x = element_text(angle = 90, hjust = 1), legend.position="bottom", legend.title = element_blank())+
   NULL
-ggsave(ebs.gg, filename=here("results","VAST_edges_ebs.png"),height=10.5,width=8.25,dpi=160, scale=1.1)
+ebs.eq.gg
 
-wc.gg <- edge.spp.dat %>%
-  filter(region=="wc",
-         axis=="coast_km")  %>%
-  mutate(quantile = recode(quantile, "quantile_0.99"="Poleward Edge",
-                           "quantile_0.01"="Equatorward Edge"),
-         species = str_to_sentence(species)) %>% 
+ebs95 <- readRDS(here("processed-data","ebs_relative_SE_vast_edge_df.rds")) %>% 
+  filter(quantile=="quantile_0.95",axis=="line_km") %>%  
+  mutate(species = gsub("_", " ", species),
+         species=tolower(species)) %>%
+  pivot_wider(names_from=quantity, values_from=value ) %>%
+  rename("Std.Error"=`Std. Error`) %>% 
+  filter(species %in% edge.spp.dat[edge.spp.dat$region=="ebs" & edge.spp.dat$quantile=="quantile_0.99",]$species)  
+
+ebs.pol.gg <- edge.spp.dat %>% 
+  filter(region=="ebs", quantile=="quantile_0.99",axis=="line_km") %>% 
+  full_join(ebs95) %>% 
+  mutate(quantile = recode(quantile, "quantile_0.99"="Quantile=0.99",
+                           "quantile_0.95"="Quantile=0.95"),
+         species = str_to_sentence(species)) %>%
   ggplot(aes(x=year, y=Estimate, group=quantile, color=quantile)) +
   geom_point() +
-  geom_line() + 
-  geom_errorbar(aes(ymin=Estimate-Std.Error, ymax=Estimate+Std.Error, group=quantile, color=quantile)) + 
+  geom_line() +
+  geom_errorbar(aes(ymin=Estimate-Std.Error, ymax=Estimate+Std.Error, group=quantile, color=quantile)) +
   scale_color_manual(values=c("grey","black")) +
-  facet_wrap(~species, ncol=5)+
-  theme(legend.position = "none") +
-  labs(x="Year", y="Coastal Distance (km)") +
+  facet_wrap(~species, ncol=4)+
+  labs(x="Year", y="Middle Domain Axis (km)") +
   theme_bw() +
-  theme( axis.text.x = element_text(angle = 90, hjust = 1), legend.position="bottom")+
+  theme( axis.text.x = element_text(angle = 90, hjust = 1), legend.position="bottom", legend.title = element_blank())+
   NULL
-ggsave(wc.gg, filename=here("results","VAST_edges_wc.png"),height=10.5,width=8.25,dpi=160, scale=1.1)
-rm(list=ls())
+ebs.pol.gg
+
+ggsave(neus.eq.gg, filename=here("results","VAST_equatorward_edges_neus.png"),height=10.5,width=8.25,dpi=160, scale=1.1)
+ggsave(neus.pol.gg, filename=here("results","VAST_poleward_edges_neus.png"),height=10.5,width=8.25,dpi=160, scale=1.1)
+ggsave(wc.eq.gg, filename=here("results","VAST_equatorward_edges_wc.png"),height=10.5,width=8.25,dpi=160, scale=1.1)
+ggsave(wc.pol.gg, filename=here("results","VAST_poleward_edges_wc.png"),height=10.5,width=8.25,dpi=160, scale=1.1)
+ggsave(ebs.eq.gg, filename=here("results","VAST_equatorward_edges_ebs.png"),height=10.5,width=8.25,dpi=160, scale=1.1)
+ggsave(ebs.pol.gg, filename=here("results","VAST_poleward_edges_ebs.png"),height=10.5,width=8.25,dpi=160, scale=1.1)
