@@ -39,7 +39,7 @@ RhoConfig = c("Beta1"=4, # "autoregressive"; intercept estimated as a fixed effe
               "Beta2"=4, # "autoregressive"; intercept estimated as a fixed effect
               "Epsilon1"=4, # "autoregressive";  autocorrelation in temporal variation  estimated as a fixed effect
               "Epsilon2"=4 # "autoregressive";  autocorrelation in temporal variation  estimated as a fixed effect
-) #### FLAG: setting these to 4 is termed a fixed effect in the VAST manual and a random effect in the documentation for make_data.
+) 
 
 OverdispersionConfig = c("Eta1"=0, "Eta2"=0) # turning off vessel-level catchability factors 
 ObsModel = c(2,1) # specifies functional form of encounter probabilities--here, lognormal

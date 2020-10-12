@@ -135,7 +135,7 @@ bayes.lm.time.edgetype.gg
 ggsave(bayes.lm.time.edgetype.gg, width=168, height=100,
        units="mm", dpi=600, filename=here("results","edge_coefficients_time_edgetype.png"))
 
-# generate posteriors grouped different ways--need full model output for this 
+# generate posteriors grouped different ways, some reported in-text--need full model output for this 
 
 # edge shift stats pooled by region
 spp.bayes.edge.lm.df %>%
