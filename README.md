@@ -2,7 +2,7 @@
 
 ### A. Fredston, M. Pinsky, B. Selden, C. Szuwalski, J. T. Thorson, S. D. Gaines, B. S. Halpern 
 
-To reference the data or methods here, please cite the manuscript. Contact A. Fredston with questions at fredston@rutgers.edu. 
+To reference the data or methods here, please cite [the preprint](https://www.authorea.com/doi/full/10.22541/au.160331933.33155622) (currently in review). Contact A. Fredston with questions at fredston@rutgers.edu. 
 
 ## Overview 
 
