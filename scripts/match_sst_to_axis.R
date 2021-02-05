@@ -1,4 +1,4 @@
-# this script matches temperature data to the coastal distance (NEUS, WC) or rotated axis (EBS) metric output from VAST. it is slow! 
+# this script matches temperature data to the coastal distance (NEUS, WC) or rotated axis (EBS) metric output from VAST. it takes about 30 minutes on my machine.
 library(here)
 library(tidyverse)
 

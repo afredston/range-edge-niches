@@ -484,3 +484,7 @@ ex.spp.bayes.gg.wc
 ggsave(ex.spp.bayes.gg.ebs, dpi=600, width=1.5, height=1.4, filename=here("results",paste0("example_posterior_",ex.spp.ebs, ".png")),scale=1.5)
 ggsave(ex.spp.bayes.gg.neus, dpi=600, width=1.5, height=1.4, filename=here("results",paste0("example_posterior_",ex.spp.neus,".png")),scale=1.5)
 ggsave(ex.spp.bayes.gg.wc, dpi=600, width=1.5, height=1.4, filename=here("results",paste0("example_posterior_",ex.spp.wc,".png")),scale=1.5)
+
+# temporarily saving the model outputs too, for further traits analysis 
+saveRDS(spp.bayes.edge.lm.df, paste0(getwd(), "/processed-data/full_output_edges_v_time.rds"))
+saveRDS(spp.bayes.niche.filter, paste0(getwd(), "/processed-data/full_output_niches_v_time.rds"))
