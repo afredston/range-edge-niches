@@ -18,16 +18,16 @@ gg.neus.violin <- spp.bayes.edge.lm.df.summary %>%
          varTracked = factor(varTracked, levels=c("Both","Cold","Warm","Neither"))) %>% 
   ggplot(aes(median, factor(varTracked), fill=varTracked)) + 
   geom_violin() +
+  geom_vline(aes(xintercept=0),linetype="dashed",color="black")+
   geom_jitter(height = 0, width = 0.1) +
   scale_fill_manual(values=c("#9900cc","#3A4ED0","#DF2301","grey"), drop=FALSE) +
   coord_cartesian(xlim=c(-25, 25)) +
   scale_x_continuous(labels=seq(-25, 25, 5), breaks=seq(-25, 25, 5)) +  theme_bw() +
   theme_bw() +
   facet_wrap(~quantile, ncol=1) + 
-#    labs(x="Edge Shift (km/year)", y="Temperature Extreme Tracked", title="Northeast") +
-#    theme(legend.position = "none") +
   labs(x=NULL, y="Temperature Extreme Tracked", title="Northeast") +
-  theme(legend.position = "none", axis.text.x = element_blank() ) +
+    theme(legend.position = "none") +
+  # theme(legend.position = "none", axis.text.x = element_blank()) +
   NULL
 gg.neus.violin
 ggsave(gg.neus.violin, filename=here("results","neus_edge_vs_niche_shifts.png"), width=110, units="mm", height=60, dpi=600, scale=1.5)
@@ -46,15 +46,15 @@ gg.wc.violin <- spp.bayes.edge.lm.df.summary %>%
          varTracked = factor(varTracked, levels=c("Both","Cold","Warm","Neither"))) %>% 
   ggplot(aes(median, factor(varTracked), fill=varTracked)) + 
   geom_violin() +
+  geom_vline(aes(xintercept=0),linetype="dashed",color="black")+
   geom_jitter(height = 0, width = 0.1) +
   scale_fill_manual(values=c("#9900cc","#3A4ED0","#DF2301","grey"), drop=FALSE) +
   coord_cartesian(xlim=c(-25, 25)) +
   scale_x_continuous(labels=seq(-25, 25, 5), breaks=seq(-25, 25, 5)) +  theme_bw() +
   facet_wrap(~quantile, ncol=1) + 
-#labs(x="Edge Shift (km/year)", y="Temperature Extreme Tracked", title="West Coast") +
- # theme(legend.position = "none") +
   labs(x=NULL, y="Temperature Extreme Tracked", title="West Coast") +
-  theme(legend.position = "none", axis.text.x = element_blank()) +
+  theme(legend.position = "none") +
+  # theme(legend.position = "none", axis.text.x = element_blank()) +
   NULL
 gg.wc.violin
 ggsave(gg.wc.violin, filename=here("results","wc_edge_vs_niche_shifts.png"), width=110, units="mm", height=50, dpi=600, scale=1.5)
@@ -73,6 +73,7 @@ gg.ebs.violin <- spp.bayes.edge.lm.df.summary %>%
          varTracked = factor(varTracked, levels=c("Both","Cold","Warm","Neither"))) %>% 
   ggplot(aes(median, factor(varTracked), fill=varTracked)) + 
   geom_violin() +
+  geom_vline(aes(xintercept=0),linetype="dashed",color="black")+
   geom_jitter(height = 0, width = 0.1) +
   scale_fill_manual(values=c("#9900cc","#3A4ED0","#DF2301","grey"), drop=FALSE) +
   coord_cartesian(xlim=c(-25, 25)) +

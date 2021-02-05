@@ -79,8 +79,8 @@ neusgg <- neus_sst_summary %>%
         axis.text.x = element_text(angle = 90, hjust = 1), 
         axis.title=element_text(family="sans",size=12,color="black"),
         strip.text.x = element_blank(),
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank()) + 
+        panel.grid.minor = element_blank()
+        ) + 
   NULL
 
 wcgg <- wc_sst_summary %>%
@@ -97,8 +97,8 @@ wcgg <- wc_sst_summary %>%
         axis.text.x = element_text(angle = 90, hjust = 1), 
         axis.title=element_text(family="sans",size=12,color="black"),
         strip.text.x = element_blank(),
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank()) + 
+        panel.grid.minor = element_blank()
+  ) + 
   NULL
 
 ebsgg <- ebs_sst_summary %>%
@@ -115,8 +115,8 @@ ebsgg <- ebs_sst_summary %>%
         axis.text.x = element_text(angle = 90, hjust = 1), 
         axis.title=element_text(family="sans",size=12,color="black"),
         strip.text.x = element_blank(),
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank()) + 
+        panel.grid.minor = element_blank()
+    ) + 
   NULL
 
 ggsave(neusgg, filename=here("results","neus_sst_inset_plot.png"), height=25, width=25, units="mm", scale=2, dpi=600)
@@ -159,10 +159,34 @@ wc_lonrange <- c(-126, -116)
 ebs_latrange <- c(54, 66)
 ebs_lonrange <- c(-179.5, -154)
 
+# make objects to plot as origin points 
+neus_coastdistdat <- readRDS(here("processed-data","neus_coastdistdat.rds"))
+wc_coastdistdat <- readRDS(here("processed-data","wc_coastdistdat.rds"))
+
+neus.origin <- neus_coastdistdat %>% 
+  filter(lengthfromhere == min(lengthfromhere))%>%
+  st_as_sf(coords=c('x','y')) %>%
+  st_cast("POINT") %>%
+  st_set_crs(st_crs(neus_bathy))
+
+wc.origin <- wc_coastdistdat %>% 
+  filter(lengthfromhere == min(lengthfromhere))%>%
+  st_as_sf(coords=c('x','y')) %>%
+  st_cast("POINT") %>%
+  st_set_crs(st_crs(wc_bathy))
+
+ebs.origin <- data.frame(ebs.lon[2], ebs.lat[2]) %>%
+  rename('x'=ebs.lon.2.,'y'=ebs.lat.2.) %>%
+  st_as_sf(coords=c('x','y')) %>%
+  summarise() %>%
+  st_cast("POINT") %>%
+  st_set_crs(st_crs(ebs_bathy))
+
 neusmap <- ggplot() + 
   geom_sf(data=neus_bathy, color="skyblue3") +
   geom_sf(data=usoutline, color="#999999") +
   geom_sf(data=neus_coast, color="black", linetype="dashed", lwd=1.5) +
+  geom_sf(data=neus.origin, color="black", fill="transparent",shape=4, size=4, stroke=4)+
   scale_x_continuous(limits = neus_lonrange, expand = c(0, 0)) +
   scale_y_continuous(limits = neus_latrange, expand = c(0, 0)) +
   theme_bw() +
@@ -177,6 +201,7 @@ wcmap <- ggplot() +
   geom_sf(data=wc_bathy, color="skyblue3") +
   geom_sf(data=usoutline, color="#999999") +
   geom_sf(data=wc_coast, color="black", linetype="dashed", lwd=1.5) +
+  geom_sf(data=wc.origin, color="black", fill="transparent",shape=4, size=4, stroke=4)+
   scale_x_continuous(limits = wc_lonrange, expand = c(0, 0)) +
   scale_y_continuous(limits = wc_latrange, expand = c(0, 0)) +
   theme_bw() +
@@ -192,7 +217,7 @@ ebsmap <- ggplot() +
   geom_sf(data=ebs_bathy, color="skyblue3") +
   geom_sf(data=usoutline, color="#999999") +
   geom_sf(data=ebs.line, color="black", linetype="dashed", lwd=1.5) +
-#  geom_segment(aes(x=-158, xend=-170, y=54, yend=66),color="black", linetype="dashed", lwd=1.5) + 
+  geom_sf(data=ebs.origin, color="black", fill="transparent",shape=4, size=4, stroke=4)+
   scale_x_continuous(limits = ebs_lonrange, expand = c(0, 0), breaks=seq(-180, -154, 2)) +
   scale_y_continuous(limits = ebs_latrange, expand = c(0, 0), breaks=seq(54, 66, 2)) +
   theme_bw() +
