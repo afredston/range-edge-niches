@@ -1,4 +1,4 @@
-# IDENTIFY WHICH SPECIES HAVE RANGE EDGES IN EACH REGION
+# IDENTIFY WHICH SPECIES HAVE RANGE EDGES IN EACH REGION, AND ADD TRAITS
 # currently just using a distance buffer that is X% of the total measurement axis length (edge must fall in middle 80%)
 library(tidyverse)
 library(magrittr)
@@ -161,6 +161,29 @@ wc.prep <- wc.df %>%
 dat <- rbind(wc.prep, neus.prep, ebs.prep) %>%
   left_join(spp.taxonomy, by=c("species"="query")) %>%
   mutate(taxongroup = ifelse(Class %in% c("Actinopterygii","Elasmobranchii"),"fish","invertebrates")) 
+
+# pull in fish traits from Beukhof et al. 2019
+# data: https://doi.org/10.1594/PANGAEA.900866
+# I downloaded the Excel file and saved the first sheet as a .csv for import into R
+
+traits_raw <- read_csv(here("raw-data","beukhof_2019_traits.csv")) %>% 
+  mutate(taxon = str_to_lower(taxon)) %>% # for matching with our dataset 
+  select(taxon, FAO, habitat, feeding.mode, tl, offspring.size, spawning.type, fecundity, age.maturity, length.infinity, age.max) %>% # keep only traits of interest 
+  distinct()
+
+# join by species name and FAO region 
+traits_dat <- dat %>% 
+  select(species, region, edgetype) %>% 
+  distinct() %>% 
+  mutate(FAO = ifelse(region == "neus", 21, # some species from region 31 could also end up in NEUS, but I checked the Beukhof data and all of those species are also in their list from 21
+                      ifelse(region == "wc", 77, 67))) %>% 
+  inner_join(traits_raw, by=c("FAO","species"="taxon")) %>% 
+  group_by(species, FAO, region, edgetype, habitat, feeding.mode, spawning.type) %>% 
+  summarise(across(tl:age.max, mean))# you should check at this stage that there are no longer multiple rows for species*FAO combos
+
+dat <- dat %>% 
+  left_join(traits_dat, by=c('species','edgetype','region'))
+
 
 # try Wald test (Jim's idea)
 # need to expand all combinations of years 
