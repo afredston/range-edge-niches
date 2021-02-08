@@ -491,110 +491,211 @@ ggsave(ex.spp.bayes.gg.wc, dpi=600, width=1.5, height=1.4, filename=here("result
 
 
 ##########################
-# Traits analysis
+# Traits analysis for appendix
 ##########################
 
-spp.bayes.edge.traits <- spp.bayes.edge.lm.df %>% 
+## EDGE SHIFTS ~ TRAITS
+# spp.bayes.edge.traits <- spp.bayes.edge.lm.df %>% 
+#   left_join(dat.summary.traits)
+# 
+# gg.edge.habitat <- spp.bayes.edge.traits %>% 
+#   filter(!is.na(habitat)) %>%  # filter rows with NAs -- leaves only fishes
+#   group_by(.draw, region, habitat) %>% 
+#   mutate(mean.param = mean(year)) %>% 
+#   ungroup() %>% 
+#   select(.draw, region, habitat, mean.param) %>% 
+#   distinct() %>%
+#   mutate(
+#     region=recode(region,
+#                   ebs="Eastern Bering Sea",
+#                   neus="Northeast",
+#                   wc="West Coast")) %>% 
+#   ggplot() +
+#   theme_bw() +
+#   facet_wrap(~region) +
+#   geom_density(aes(x=mean.param, fill=habitat), color="black", alpha=0.5) +
+#   labs(x="Edge Shift (km/yr)", y="Density") +
+#   theme(legend.position="bottom") +
+#   NULL
+# ggsave(gg.edge.habitat, width=6, height=2, filename=here("results","edge_shifts_v_habitat.png"), dpi=160, scale=1.2)
+# 
+# gg.edge.spawning.type <- spp.bayes.edge.traits %>% 
+#   filter(!is.na(spawning.type)) %>%  # filter rows with NAs -- leaves only fishes
+#   group_by(.draw, region, spawning.type) %>% 
+#   mutate(mean.param = mean(year)) %>% 
+#   ungroup() %>% 
+#   select(.draw, region, spawning.type, mean.param) %>% 
+#   distinct() %>%
+#   mutate(
+#     region=recode(region,
+#                   ebs="Eastern Bering Sea",
+#                   neus="Northeast",
+#                   wc="West Coast")) %>% 
+#   ggplot() +
+#   theme_bw() +
+#   facet_grid(~ region) +
+#   geom_density(aes(x=mean.param, fill=spawning.type), color="black", alpha=0.5) +
+#   labs(x="Edge Shift (km/yr)", y="Density") +
+#   theme(legend.position="bottom") +
+#   NULL
+# ggsave(gg.edge.spawning.type, width=6, height=2, filename=here("results","edge_shifts_v_spawn_type.png"), dpi=160, scale=1.2)
+# 
+# gg.edge.fecundity <-  spp.bayes.edge.traits %>% 
+#   filter(!is.na(fecundity)) %>%
+#   mutate(fecundity.q = ifelse(fecundity < quantile(dat.summary.traits$fecundity, 0.25, na.rm=TRUE), "0-0.25",ifelse(fecundity < quantile(dat.summary.traits$fecundity, 0.5, na.rm=TRUE), "0.25-0.5", ifelse(fecundity < quantile(dat.summary.traits$fecundity, 0.75, na.rm=TRUE),"0.5-0.75", "0.75-1")))) %>%  
+#   group_by(.draw, region, fecundity.q) %>% 
+#   mutate(mean.param = mean(year)) %>% 
+#   ungroup() %>% 
+#   select(.draw, region, fecundity.q, mean.param) %>% 
+#   distinct() %>%
+#   mutate(
+#     region=recode(region,
+#                   ebs="Eastern Bering Sea",
+#                   neus="Northeast",
+#                   wc="West Coast")) %>% 
+#   ggplot() +
+#   theme_bw() +
+#  facet_grid(~ region) +
+#   geom_density(aes(x=mean.param, fill=fecundity.q), color="black", alpha=0.5) +
+#   labs(x="Edge Shift (km/yr)", y="Density") +
+#   theme(legend.position="bottom") +
+#   NULL
+# ggsave(gg.edge.fecundity, width=6, height=2, filename=here("results","edge_shifts_v_fecundity.png"), dpi=160, scale=1.2)
+# 
+# gg.edge.tl <- spp.bayes.edge.lm.df.summary %>% 
+#   left_join(dat.summary.traits)  %>%
+#   mutate(
+#     region=recode(region,
+#                   ebs="Eastern Bering Sea",
+#                   neus="Northeast",
+#                   wc="West Coast")) %>%  
+#   ggplot() +
+#   theme_bw() +
+#   geom_point(aes(x=tl, y=mean)) +
+#   geom_errorbar(aes(x=tl, y=mean, ymin=lower, ymax=upper)) +
+#   facet_wrap(~region) +
+#   labs(x="Trophic Level", y="Edge Shift (km/yr)") +
+#   NULL
+# ggsave(gg.edge.tl, width=6, height=2, filename=here("results","edge_shifts_v_trophic_level.png"), dpi=160, scale=1.2)
+
+# NICHE SHIFTS ~ TRAITS
+
+spp.bayes.niche.traits <- spp.bayes.niche.filter %>% 
   left_join(dat.summary.traits)
 
-gg.edge.habitat <- spp.bayes.edge.traits %>% # add traits data back in
-  filter(!is.na(habitat)) %>%  # filter rows with NAs -- leaves only fishes
-  group_by(.draw, region, habitat) %>% 
-  mutate(mean.param = mean(year)) %>% 
+gg.niche.habitat <- spp.bayes.niche.traits %>% 
+  filter(!is.na(habitat)) %>%  
+  group_by(.draw, region, predicted.var, habitat) %>% 
+  mutate(mean.param = mean(year_match)) %>% 
   ungroup() %>% 
-  select(.draw, region, habitat, mean.param) %>% 
+  select(.draw, region, predicted.var, habitat, mean.param) %>% 
   distinct() %>%
   mutate(
     region=recode(region,
                   ebs="Eastern Bering Sea",
                   neus="Northeast",
-                  wc="West Coast")) %>% 
+                  wc="West Coast"),
+    predicted.var=recode(predicted.var,
+                         predict.sstmax="Summer SST",
+                         predict.sstmin="Winter SST")) %>% 
   ggplot() +
   theme_bw() +
-  facet_wrap(~region) +
+  facet_grid(predicted.var~region) +
   geom_density(aes(x=mean.param, fill=habitat), color="black", alpha=0.5) +
-  labs(x="Edge Shift (km/yr)", y="Density") +
+  labs(x="Niche Shift (°C/yr)", y="Density") +
   theme(legend.position="bottom") +
   NULL
-ggsave(gg.edge.habitat, width=6, height=2, filename=here("results","edge_shifts_v_habitat.png"), dpi=160, scale=1.2)
+ggsave(gg.niche.habitat, width=6, height=3.5, filename=here("results","niche_shifts_v_habitat.png"), dpi=160, scale=1.3)
 
-gg.edge.spawning.type <- spp.bayes.edge.traits %>% # add traits data back in
-  filter(!is.na(spawning.type)) %>%  # filter rows with NAs -- leaves only fishes
-  group_by(.draw, region, spawning.type) %>% 
-  mutate(mean.param = mean(year)) %>% 
+
+gg.niche.spawning.type <- spp.bayes.niche.traits %>% 
+  filter(!is.na(spawning.type)) %>%  
+  group_by(.draw, region, predicted.var, spawning.type) %>% 
+  mutate(mean.param = mean(year_match)) %>% 
   ungroup() %>% 
-  select(.draw, region, spawning.type, mean.param) %>% 
+  select(.draw, region, predicted.var, spawning.type, mean.param) %>% 
   distinct() %>%
   mutate(
     region=recode(region,
                   ebs="Eastern Bering Sea",
                   neus="Northeast",
-                  wc="West Coast")) %>% 
+                  wc="West Coast"),
+    predicted.var=recode(predicted.var,
+                         predict.sstmax="Summer SST",
+                         predict.sstmin="Winter SST")) %>% 
   ggplot() +
   theme_bw() +
-  facet_grid(~ region) +
+  facet_grid(predicted.var~region) +
   geom_density(aes(x=mean.param, fill=spawning.type), color="black", alpha=0.5) +
-  labs(x="Edge Shift (km/yr)", y="Density") +
+  labs(x="Niche Shift (°C/yr)", y="Density") +
   theme(legend.position="bottom") +
   NULL
-ggsave(gg.edge.spawning.type, width=6, height=2, filename=here("results","edge_shifts_v_spawn_type.png"), dpi=160, scale=1.2)
+ggsave(gg.niche.spawning.type, width=6, height=3.5, filename=here("results","niche_shifts_v_spawn_type.png"), dpi=160, scale=1.3)
 
-gg.edge.fecundity <-  spp.bayes.edge.traits %>% 
+gg.niche.fecundity <-  spp.bayes.niche.traits %>% 
   filter(!is.na(fecundity)) %>%
   mutate(fecundity.q = ifelse(fecundity < quantile(dat.summary.traits$fecundity, 0.25, na.rm=TRUE), "0-0.25",ifelse(fecundity < quantile(dat.summary.traits$fecundity, 0.5, na.rm=TRUE), "0.25-0.5", ifelse(fecundity < quantile(dat.summary.traits$fecundity, 0.75, na.rm=TRUE),"0.5-0.75", "0.75-1")))) %>%  
-  group_by(.draw, region, fecundity.q) %>% 
-  mutate(mean.param = mean(year)) %>% 
+  group_by(.draw, region, predicted.var, fecundity.q) %>% 
+  mutate(mean.param = mean(year_match)) %>% 
   ungroup() %>% 
-  select(.draw, region, fecundity.q, mean.param) %>% 
+  select(.draw, region, predicted.var, fecundity.q, mean.param) %>% 
   distinct() %>%
   mutate(
     region=recode(region,
                   ebs="Eastern Bering Sea",
                   neus="Northeast",
-                  wc="West Coast")) %>% 
+                  wc="West Coast"),
+    predicted.var=recode(predicted.var,
+                         predict.sstmax="Summer SST",
+                         predict.sstmin="Winter SST")) %>% 
+  rename("Fecundity Quantile"=fecundity.q) %>% 
   ggplot() +
   theme_bw() +
- facet_grid(~ region) +
-  geom_density(aes(x=mean.param, fill=fecundity.q), color="black", alpha=0.5) +
-  labs(x="Edge Shift (km/yr)", y="Density") +
+  facet_grid(predicted.var~ region) +
+  geom_density(aes(x=mean.param, fill=`Fecundity Quantile`), color="black", alpha=0.5) +
+  labs(x="Niche Shift (°C/yr)", y="Density") +
   theme(legend.position="bottom") +
   NULL
-ggsave(gg.edge.fecundity, width=6, height=2, filename=here("results","edge_shifts_v_fecundity.png"), dpi=160, scale=1.2)
+ggsave(gg.niche.fecundity, width=6, height=3.5, filename=here("results","niche_shifts_v_fecundity.png"), dpi=160, scale=1.3)
 
-# this is a scatterplot because length is continuous
-gg.edge.tl <- spp.bayes.edge.lm.df.summary %>% 
+gg.niche.tl <- spp.bayes.niche.lm.stats %>% 
   left_join(dat.summary.traits)  %>%
   mutate(
     region=recode(region,
                   ebs="Eastern Bering Sea",
                   neus="Northeast",
-                  wc="West Coast")) %>%  
+                  wc="West Coast"),
+    predicted.var=recode(predicted.var,
+                         predict.sstmax="Summer SST",
+                         predict.sstmin="Winter SST")) %>%  
   ggplot() +
   theme_bw() +
   geom_point(aes(x=tl, y=mean)) +
   geom_errorbar(aes(x=tl, y=mean, ymin=lower, ymax=upper)) +
-  facet_wrap(~region) +
-  labs(x="Total Length (m)", y="Edge Shift (km/yr)") +
+  facet_wrap(predicted.var~region) +
+  labs(x="Trophic Level", y="Niche Shift (°C/yr)") +
   NULL
-ggsave(gg.edge.tl, width=6, height=2, filename=here("results","edge_shifts_v_length.png"), dpi=160, scale=1.2)
+ggsave(gg.niche.tl, width=6, height=3.5, filename=here("results","niche_shifts_v_trophic_level.png"), dpi=160, scale=1.3)
 
 
-# plot posteriors 
-# bayes.lm.time.gg <- spp.bayes.edge.lm.df  %>%
-#   group_by(.draw, region) %>%
-#   mutate(mean.param = mean(year) ) %>%
-#   ungroup() %>%
-#   select(.draw, mean.param, region) %>%
-#   distinct() %>%
-#   ggplot() +
-#   theme_bw() +
-#   geom_density(aes(x=mean.param, fill=region), color="black", alpha=0.5) +
-#   scale_fill_brewer(type="seq", palette="YlGnBu", labels=c("Eastern Bering Sea","Northeast","West Coast")) +
-#   labs(x="Coefficient of Edge Position on Time (km/yr)", y="Density", fill="Region") +
-#   theme(legend.position="bottom") +
-#   NULL
-# bayes.lm.time.gg
-# ggsave(bayes.lm.time.gg, width=3, height=4, dpi=160, filename=here("results","edge_coefficients_time.png"), scale=1.6)
+gg.niche.len <- spp.bayes.niche.lm.stats %>% 
+  left_join(dat.summary.traits)  %>%
+  mutate(
+    region=recode(region,
+                  ebs="Eastern Bering Sea",
+                  neus="Northeast",
+                  wc="West Coast"),
+    predicted.var=recode(predicted.var,
+                         predict.sstmax="Summer SST",
+                         predict.sstmin="Winter SST")) %>%  
+  ggplot() +
+  theme_bw() +
+  geom_point(aes(x=length.infinity, y=mean)) +
+  geom_errorbar(aes(x=length.infinity, y=mean, ymin=lower, ymax=upper)) +
+  facet_wrap(predicted.var~region) +
+  labs(x="Infinity Length (cm)", y="Niche Shift (°C/yr)") +
+  NULL
+ggsave(gg.niche.len, width=6, height=3.5, filename=here("results","niche_shifts_v_length.png"), dpi=160, scale=1.3)
 
 
 # temporarily saving the model outputs too, for further traits analysis 
