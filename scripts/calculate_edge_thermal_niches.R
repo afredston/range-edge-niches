@@ -218,6 +218,7 @@ ebs.sst <- readRDS(here("processed-data","ebs_sst_linedist.rds"))
 wc.sst <- readRDS(here("processed-data","wc_sst_coastdist.rds"))
 neus.sst <- readRDS(here("processed-data","neus_sst_coastdist.rds"))
 
+# prepare df of all SST values at all edge positions 
 ebs.sst.prepgam <- ebs.sst %>% 
   group_by(line_km, year_match) %>%
   mutate(sstmean = mean(sst),
@@ -248,19 +249,15 @@ neus.sst.prepgam <- neus.sst %>%
   distinct() %>%
   mutate(year_match = as.factor(year_match)) 
 
-# set up GAMs for coastal and NW axes 
-# note that the 99, 01 names aren't really appropriate anymore now that we are using monthly means
-ebs.sst.temp.gam.mean <- gam(sstmean ~ year_match + s(line_km, by=year_match), data=ebs.sst.prepgam)
-ebs.sst.temp.gam.99 <- gam(sstmax ~ year_match + s(line_km, by=year_match), data=ebs.sst.prepgam)
-ebs.sst.temp.gam.01 <- gam(sstmin ~ year_match + s(line_km, by=year_match), data=ebs.sst.prepgam)
+# set up GAMs to predict temperature at position of edge this year 
+ebs.sst.temp.gam.max <- gam(sstmax ~ year_match + s(line_km, by=year_match), data=ebs.sst.prepgam)
+ebs.sst.temp.gam.min <- gam(sstmin ~ year_match + s(line_km, by=year_match), data=ebs.sst.prepgam)
 
-wc.sst.temp.gam.mean <- gam(sstmean ~ year_match + s(coast_km, by=year_match), data=wc.sst.prepgam)
-wc.sst.temp.gam.99 <- gam(sstmax ~ year_match + s(coast_km, by=year_match), data=wc.sst.prepgam)
-wc.sst.temp.gam.01 <- gam(sstmin ~ year_match + s(coast_km, by=year_match), data=wc.sst.prepgam)
+wc.sst.temp.gam.max <- gam(sstmax ~ year_match + s(coast_km, by=year_match), data=wc.sst.prepgam)
+wc.sst.temp.gam.min <- gam(sstmin ~ year_match + s(coast_km, by=year_match), data=wc.sst.prepgam)
 
-neus.sst.temp.gam.mean <- gam(sstmean ~ year_match + s(coast_km, by=year_match), data=neus.sst.prepgam)
-neus.sst.temp.gam.99 <- gam(sstmax ~ year_match + s(coast_km, by=year_match), data=neus.sst.prepgam)
-neus.sst.temp.gam.01 <- gam(sstmin ~ year_match + s(coast_km, by=year_match), data=neus.sst.prepgam)
+neus.sst.temp.gam.max <- gam(sstmax ~ year_match + s(coast_km, by=year_match), data=neus.sst.prepgam)
+neus.sst.temp.gam.min <- gam(sstmin ~ year_match + s(coast_km, by=year_match), data=neus.sst.prepgam)
 
 # predict temp from edge position--prep datasets
 
@@ -282,27 +279,49 @@ neus.pred <- dat.models %>%
   rename(coast_km=Estimate,
          year_match=year) 
 
+# set up dfs with same column names but lagged edge positions to predict temperature this year at the position where a species' edge was last year
+ebs.pred.lag <- ebs.pred %>% 
+  arrange(year_match) %>% 
+  group_by(species, quantile) %>% 
+  mutate(line_km_lag = lag(line_km)) %>% 
+  ungroup() %>% 
+  select(-line_km) %>% 
+  rename(line_km = line_km_lag) %>% 
+  filter(year_match > min(year_match))
+
+wc.pred.lag <- wc.pred %>% 
+  arrange(year_match) %>% 
+  group_by(species, quantile) %>% 
+  mutate(coast_km_lag = lag(coast_km)) %>% 
+  ungroup() %>% 
+  select(-coast_km) %>% 
+  rename(coast_km = coast_km_lag) %>% 
+  filter(year_match > min(year_match))
+
+neus.pred.lag <- neus.pred %>% 
+  arrange(year_match) %>% 
+  group_by(species, quantile) %>% 
+  mutate(coast_km_lag = lag(coast_km)) %>% 
+  ungroup() %>% 
+  select(-coast_km) %>% 
+  rename(coast_km = coast_km_lag) %>% 
+  filter(year_match > min(year_match))
+
 # add columns with predicted temperature at edge every year 
-ebs.pred$predict.sstmean <- predict.gam(ebs.sst.temp.gam.mean, ebs.pred)
-ebs.pred$predict.sstmean.se <- predict.gam(ebs.sst.temp.gam.mean, ebs.pred, se.fit=TRUE)$se.fit
-ebs.pred$predict.sstmax <- predict.gam(ebs.sst.temp.gam.99, ebs.pred)
-ebs.pred$predict.sstmax.se <- predict.gam(ebs.sst.temp.gam.99, ebs.pred,se.fit=TRUE)$se.fit
-ebs.pred$predict.sstmin <- predict.gam(ebs.sst.temp.gam.01, ebs.pred)
-ebs.pred$predict.sstmin.se <- predict.gam(ebs.sst.temp.gam.01, ebs.pred,se.fit=TRUE)$se.fit
+ebs.pred$predict.sstmax <- predict.gam(ebs.sst.temp.gam.max, ebs.pred)
+ebs.pred$predict.sstmax.se <- predict.gam(ebs.sst.temp.gam.max, ebs.pred,se.fit=TRUE)$se.fit
+ebs.pred$predict.sstmin <- predict.gam(ebs.sst.temp.gam.min, ebs.pred)
+ebs.pred$predict.sstmin.se <- predict.gam(ebs.sst.temp.gam.min, ebs.pred,se.fit=TRUE)$se.fit
 
-wc.pred$predict.sstmean <- predict.gam(wc.sst.temp.gam.mean, wc.pred)
-wc.pred$predict.sstmean.se <- predict.gam(wc.sst.temp.gam.mean, wc.pred, se.fit=TRUE)$se.fit
-wc.pred$predict.sstmax <- predict.gam(wc.sst.temp.gam.99, wc.pred)
-wc.pred$predict.sstmax.se <- predict.gam(wc.sst.temp.gam.99, wc.pred,se.fit=TRUE)$se.fit
-wc.pred$predict.sstmin <- predict.gam(wc.sst.temp.gam.01, wc.pred)
-wc.pred$predict.sstmin.se <- predict.gam(wc.sst.temp.gam.01, wc.pred, se.fit=TRUE)$se.fit
+wc.pred$predict.sstmax <- predict.gam(wc.sst.temp.gam.max, wc.pred)
+wc.pred$predict.sstmax.se <- predict.gam(wc.sst.temp.gam.max, wc.pred,se.fit=TRUE)$se.fit
+wc.pred$predict.sstmin <- predict.gam(wc.sst.temp.gam.min, wc.pred)
+wc.pred$predict.sstmin.se <- predict.gam(wc.sst.temp.gam.min, wc.pred, se.fit=TRUE)$se.fit
 
-neus.pred$predict.sstmean <- predict.gam(neus.sst.temp.gam.mean, neus.pred)
-neus.pred$predict.sstmean.se <- predict.gam(neus.sst.temp.gam.mean, neus.pred, se.fit=TRUE)$se.fit
-neus.pred$predict.sstmax <- predict.gam(neus.sst.temp.gam.99, neus.pred)
-neus.pred$predict.sstmax.se <- predict.gam(neus.sst.temp.gam.99, neus.pred, se.fit=TRUE)$se.fit
-neus.pred$predict.sstmin <- predict.gam(neus.sst.temp.gam.01, neus.pred)
-neus.pred$predict.sstmin.se <- predict.gam(neus.sst.temp.gam.01, neus.pred, se.fit=TRUE)$se.fit
+neus.pred$predict.sstmax <- predict.gam(neus.sst.temp.gam.max, neus.pred)
+neus.pred$predict.sstmax.se <- predict.gam(neus.sst.temp.gam.max, neus.pred, se.fit=TRUE)$se.fit
+neus.pred$predict.sstmin <- predict.gam(neus.sst.temp.gam.min, neus.pred)
+neus.pred$predict.sstmin.se <- predict.gam(neus.sst.temp.gam.min, neus.pred, se.fit=TRUE)$se.fit
 
 neus.pred <- rename(neus.pred, edge_position=coast_km)
 neus.pred$axis <- "coast_km"
@@ -315,19 +334,61 @@ ebs.pred$axis <- "line_km"
 
 # tidy columns and combine
 dat.predict1 <- rbind(neus.pred, wc.pred, ebs.pred)%>%
-  select(-predict.sstmean.se, -predict.sstmax.se, -predict.sstmin.se) %>%
-  pivot_longer(cols=c(predict.sstmean, predict.sstmax, predict.sstmin), names_to="predicted.var",values_to="sst") 
+  select(-predict.sstmax.se, -predict.sstmin.se) %>%
+  pivot_longer(cols=c(predict.sstmax, predict.sstmin), names_to="predicted.var",values_to="sst") 
 
 dat.predict <- rbind(neus.pred, wc.pred, ebs.pred)%>%
-  select(-predict.sstmean, -predict.sstmax, -predict.sstmin) %>%
-  pivot_longer(cols=c(predict.sstmean.se, predict.sstmax.se, predict.sstmin.se), names_to="predicted.var",values_to="sstSE") %>%
+  select(-predict.sstmax, -predict.sstmin) %>%
+  pivot_longer(cols=c(predict.sstmax.se, predict.sstmin.se), names_to="predicted.var",values_to="sstSE") %>%
   mutate(predicted.var=str_replace(predicted.var, ".se","")) %>%
   inner_join(dat.predict1)
 
-dat.predict.niche <- dat.predict %>%
-  filter(!predicted.var=="predict.sstmean")
-write_csv(dat.predict.niche, here("processed-data","species_thermal_niche_v_time.csv"))
+write_csv(dat.predict, here("processed-data","species_thermal_niche_v_time.csv"))
 
+# exploring isotherm tracking: what is the predicted temperature this year at last year's edge position?
+ebs.pred.lag$predict.sstmax <- predict.gam(ebs.sst.temp.gam.max, ebs.pred.lag)
+ebs.pred.lag$predict.sstmax.se <- predict.gam(ebs.sst.temp.gam.max, ebs.pred.lag,se.fit=TRUE)$se.fit
+ebs.pred.lag$predict.sstmin <- predict.gam(ebs.sst.temp.gam.min, ebs.pred.lag)
+ebs.pred.lag$predict.sstmin.se <- predict.gam(ebs.sst.temp.gam.min, ebs.pred.lag,se.fit=TRUE)$se.fit
+
+wc.pred.lag$predict.sstmax <- predict.gam(wc.sst.temp.gam.max, wc.pred.lag)
+wc.pred.lag$predict.sstmax.se <- predict.gam(wc.sst.temp.gam.max, wc.pred.lag,se.fit=TRUE)$se.fit
+wc.pred.lag$predict.sstmin <- predict.gam(wc.sst.temp.gam.min, wc.pred.lag)
+wc.pred.lag$predict.sstmin.se <- predict.gam(wc.sst.temp.gam.min, wc.pred.lag, se.fit=TRUE)$se.fit
+
+neus.pred.lag$predict.sstmax <- predict.gam(neus.sst.temp.gam.max, neus.pred.lag)
+neus.pred.lag$predict.sstmax.se <- predict.gam(neus.sst.temp.gam.max, neus.pred.lag, se.fit=TRUE)$se.fit
+neus.pred.lag$predict.sstmin <- predict.gam(neus.sst.temp.gam.min, neus.pred.lag)
+neus.pred.lag$predict.sstmin.se <- predict.gam(neus.sst.temp.gam.min, neus.pred.lag, se.fit=TRUE)$se.fit
+
+# tidy results and label lag columns appropriately
+neus.pred.lag <- rename(neus.pred.lag, edge_position_lag=coast_km)
+neus.pred.lag$axis <- "coast_km"
+
+wc.pred.lag <- rename(wc.pred.lag, edge_position_lag=coast_km)
+wc.pred.lag$axis <- "coast_km"
+
+ebs.pred.lag <- rename(ebs.pred.lag, edge_position_lag=line_km)
+ebs.pred.lag$axis <- "line_km"
+
+# first tidy means
+dat.predict1.lag <- rbind(neus.pred.lag, wc.pred.lag, ebs.pred.lag)%>%
+  select(-predict.sstmax.se, -predict.sstmin.se) %>%
+  pivot_longer(cols=c(predict.sstmax, predict.sstmin), names_to="predicted.var",values_to="sst_lag")
+
+# then tidy SEs and join 
+dat.predict.lag.prep <- rbind(neus.pred.lag, wc.pred.lag, ebs.pred.lag)%>%
+  select(-predict.sstmax, -predict.sstmin) %>%
+  pivot_longer(cols=c(predict.sstmax.se, predict.sstmin.se), names_to="predicted.var",values_to="sstSE_lag") %>%
+  mutate(predicted.var=str_replace(predicted.var, ".se","")) %>%
+  inner_join(dat.predict1.lag) %>% 
+  select(region, species, quantile, year_match, predicted.var, axis, sst_lag, sstSE_lag, edge_position_lag) %>% 
+  distinct()
+
+dat.predict.lag <- dat.predict %>% 
+  left_join(dat.predict.lag.prep)
+
+write_csv(dat.predict.lag, here("processed-data","species_thermal_niche_v_time_with_lags.csv"))
 
 #######################
 ### estimate change in edge thermal niche over time
