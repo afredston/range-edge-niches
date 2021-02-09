@@ -733,7 +733,7 @@ gg.niche.tl <- spp.bayes.niche.lm.stats %>%
   theme_bw() +
   geom_point(aes(x=tl, y=mean)) +
   geom_errorbar(aes(x=tl, y=mean, ymin=lower, ymax=upper)) +
-  facet_wrap(predicted.var~region) +
+  facet_grid(predicted.var~region) +
   labs(x="Trophic Level", y="Niche Shift (°C/yr)") +
   NULL
 ggsave(gg.niche.tl, width=6, height=3.5, filename=here("results","niche_shifts_v_trophic_level.png"), dpi=160, scale=1.3)
@@ -753,7 +753,7 @@ gg.niche.len <- spp.bayes.niche.lm.stats %>%
   theme_bw() +
   geom_point(aes(x=length.infinity, y=mean)) +
   geom_errorbar(aes(x=length.infinity, y=mean, ymin=lower, ymax=upper)) +
-  facet_wrap(predicted.var~region) +
+  facet_grid(predicted.var~region) +
   labs(x="Infinity Length (cm)", y="Niche Shift (°C/yr)") +
   NULL
 ggsave(gg.niche.len, width=6, height=3.5, filename=here("results","niche_shifts_v_length.png"), dpi=160, scale=1.3)
