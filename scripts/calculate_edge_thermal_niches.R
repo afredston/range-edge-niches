@@ -362,27 +362,27 @@ neus.pred.lag$predict.sstmin <- predict.gam(neus.sst.temp.gam.min, neus.pred.lag
 neus.pred.lag$predict.sstmin.se <- predict.gam(neus.sst.temp.gam.min, neus.pred.lag, se.fit=TRUE)$se.fit
 
 # tidy results and label lag columns appropriately
-neus.pred.lag <- rename(neus.pred.lag, edge_position_lag=coast_km)
+neus.pred.lag <- rename(neus.pred.lag, edge_position_last_year=coast_km)
 neus.pred.lag$axis <- "coast_km"
 
-wc.pred.lag <- rename(wc.pred.lag, edge_position_lag=coast_km)
+wc.pred.lag <- rename(wc.pred.lag, edge_position_last_year=coast_km)
 wc.pred.lag$axis <- "coast_km"
 
-ebs.pred.lag <- rename(ebs.pred.lag, edge_position_lag=line_km)
+ebs.pred.lag <- rename(ebs.pred.lag, edge_position_last_year=line_km)
 ebs.pred.lag$axis <- "line_km"
 
 # first tidy means
 dat.predict1.lag <- rbind(neus.pred.lag, wc.pred.lag, ebs.pred.lag)%>%
   select(-predict.sstmax.se, -predict.sstmin.se) %>%
-  pivot_longer(cols=c(predict.sstmax, predict.sstmin), names_to="predicted.var",values_to="sst_lag")
+  pivot_longer(cols=c(predict.sstmax, predict.sstmin), names_to="predicted.var",values_to="sst_at_last_years_edge")
 
 # then tidy SEs and join 
 dat.predict.lag.prep <- rbind(neus.pred.lag, wc.pred.lag, ebs.pred.lag)%>%
   select(-predict.sstmax, -predict.sstmin) %>%
-  pivot_longer(cols=c(predict.sstmax.se, predict.sstmin.se), names_to="predicted.var",values_to="sstSE_lag") %>%
+  pivot_longer(cols=c(predict.sstmax.se, predict.sstmin.se), names_to="predicted.var",values_to="sst_SE_at_last_years_edge") %>%
   mutate(predicted.var=str_replace(predicted.var, ".se","")) %>%
   inner_join(dat.predict1.lag) %>% 
-  select(region, species, quantile, year_match, predicted.var, axis, sst_lag, sstSE_lag, edge_position_lag) %>% 
+  select(region, species, quantile, year_match, predicted.var, axis, sst_at_last_years_edge, sst_SE_at_last_years_edge, edge_position_last_year) %>% 
   distinct()
 
 dat.predict.lag <- dat.predict %>% 
