@@ -12,10 +12,10 @@ gg.neus.violin <- spp.bayes.edge.lm.df.summary %>%
          quantile=as.factor(quantile),
          varTracked = recode(varTracked, 
                              "both" = "Both",
-                             "predict.sstmin" = "Cold",
-                             "predict.sstmax"="Warm",
+                             "predict.sstmin" = "Winter",
+                             "predict.sstmax"="Summer",
                              "none" = "Neither"),
-         varTracked = factor(varTracked, levels=c("Both","Cold","Warm","Neither"))) %>% 
+         varTracked = factor(varTracked, levels=c("Both","Winter","Summer","Neither"))) %>% 
   ggplot(aes(median, factor(varTracked), fill=varTracked)) + 
   geom_violin() +
   geom_vline(aes(xintercept=0),linetype="dashed",color="black")+
@@ -40,10 +40,10 @@ gg.wc.violin <- spp.bayes.edge.lm.df.summary %>%
          quantile=as.factor(quantile),
          varTracked = recode(varTracked, 
                              "both" = "Both",
-                             "predict.sstmin" = "Cold",
-                             "predict.sstmax"="Warm",
+                             "predict.sstmin" = "Winter",
+                             "predict.sstmax"="Summer",
                              "none" = "Neither"),
-         varTracked = factor(varTracked, levels=c("Both","Cold","Warm","Neither"))) %>% 
+         varTracked = factor(varTracked, levels=c("Both","Winter","Summer","Neither"))) %>% 
   ggplot(aes(median, factor(varTracked), fill=varTracked)) + 
   geom_violin() +
   geom_vline(aes(xintercept=0),linetype="dashed",color="black")+
@@ -52,12 +52,13 @@ gg.wc.violin <- spp.bayes.edge.lm.df.summary %>%
   coord_cartesian(xlim=c(-25, 25)) +
   scale_x_continuous(labels=seq(-25, 25, 5), breaks=seq(-25, 25, 5)) +  theme_bw() +
   facet_wrap(~quantile, ncol=1) + 
-  labs(x=NULL, y="Temperature Extreme Tracked", title="West Coast") +
+#  labs(x=NULL, y="Temperature Extreme Tracked", title="West Coast") +
+  labs(x=NULL, y=NULL, title="West Coast") +
   theme(legend.position = "none") +
   # theme(legend.position = "none", axis.text.x = element_blank()) +
   NULL
 gg.wc.violin
-ggsave(gg.wc.violin, filename=here("results","wc_edge_vs_niche_shifts.png"), width=110, units="mm", height=50, dpi=600, scale=1.5)
+ggsave(gg.wc.violin, filename=here("results","wc_edge_vs_niche_shifts.png"), width=100, units="mm", height=35, dpi=600, scale=1.5)
 
 gg.ebs.violin <- spp.bayes.edge.lm.df.summary %>%
   left_join(spp.bayes.niche.results, by=c("species","region","quantile")) %>%
@@ -67,10 +68,10 @@ gg.ebs.violin <- spp.bayes.edge.lm.df.summary %>%
          quantile=as.factor(quantile),
          varTracked = recode(varTracked, 
                              "both" = "Both",
-                             "predict.sstmin" = "Cold",
-                             "predict.sstmax"="Warm",
+                             "predict.sstmin" = "Winter",
+                             "predict.sstmax"="Summer",
                              "none" = "Neither"),
-         varTracked = factor(varTracked, levels=c("Both","Cold","Warm","Neither"))) %>% 
+         varTracked = factor(varTracked, levels=c("Both","Winter","Summer","Neither"))) %>% 
   ggplot(aes(median, factor(varTracked), fill=varTracked)) + 
   geom_violin() +
   geom_vline(aes(xintercept=0),linetype="dashed",color="black")+
@@ -80,8 +81,8 @@ gg.ebs.violin <- spp.bayes.edge.lm.df.summary %>%
   scale_x_continuous(labels=seq(-25, 25, 5), breaks=seq(-25, 25, 5)) +
   theme_bw() +
   facet_wrap(~quantile, ncol=1) + 
-  labs(x="Edge Shift (km/year)", y="Temperature Extreme Tracked", title="Eastern Bering Sea") +
+  labs(x="Edge Shift (km/year)", y=NULL, title="Eastern Bering Sea") +
   theme(legend.position = "none") +
   NULL
 gg.ebs.violin
-ggsave(gg.ebs.violin, filename=here("results","ebs_edge_vs_niche_shifts.png"), width=107.7, units="mm", height=45, dpi=600, scale=1.5)
+ggsave(gg.ebs.violin, filename=here("results","ebs_edge_vs_niche_shifts.png"), width=100, units="mm", height=45, dpi=600, scale=1.5)

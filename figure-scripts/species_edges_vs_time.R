@@ -9,8 +9,8 @@ edge.spp.dat <- readRDS(here("processed-data","all_edge_spp_df.rds"))%>%
 #####
 # make example plots for methods schematic 
 #####
-ex.spp.ebs <- "paralithodes camtschaticus" # red king crab
-ex.spp.neus <- "gadus morhua" # atlantic cod
+ex.spp.ebs <- "limanda proboscidea" # longhead dab
+ex.spp.neus <- "homarus americanus" # lobster
 ex.spp.wc <- "sebastes pinniger" # canary rockfish
 
 # make time-series plots for example figure:
@@ -93,7 +93,7 @@ neus.eq.gg <- edge.spp.dat %>%
   geom_errorbar(aes(ymin=Estimate-Std.Error, ymax=Estimate+Std.Error, group=quantile, color=quantile)) +
   scale_color_manual(values=c("black","grey")) +
   facet_wrap(~species, ncol=4)+
-  labs(x="Year", y="Coastal Distance (km)") +
+  labs(x="Year", y="Coastal Distance (km)",title="Northeast Equatorward Edges") +
   theme_bw() +
   theme( axis.text.x = element_text(angle = 90, hjust = 1), legend.position="bottom", legend.title = element_blank())+
   NULL
@@ -120,7 +120,7 @@ neus.pol.gg <- edge.spp.dat %>%
   geom_errorbar(aes(ymin=Estimate-Std.Error, ymax=Estimate+Std.Error, group=quantile, color=quantile)) +
   scale_color_manual(values=c("grey","black")) +
   facet_wrap(~species, ncol=4)+
-  labs(x="Year", y="Coastal Distance (km)") +
+  labs(x="Year", y="Coastal Distance (km)", title="Northeast Poleward Edges") +
   theme_bw() +
   theme( axis.text.x = element_text(angle = 90, hjust = 1), legend.position="bottom", legend.title = element_blank())+
   NULL
@@ -146,7 +146,7 @@ wc.eq.gg <- edge.spp.dat %>%
   geom_errorbar(aes(ymin=Estimate-Std.Error, ymax=Estimate+Std.Error, group=quantile, color=quantile)) +
   scale_color_manual(values=c("black","grey")) +
   facet_wrap(~species, ncol=3)+
-  labs(x="Year", y="Coastal Distance (km)") +
+  labs(x="Year", y="Coastal Distance (km)", title="West Coast Equatorward Edges") +
   theme_bw() +
   theme( axis.text.x = element_text(angle = 90, hjust = 1), legend.position="bottom", legend.title = element_blank())+
   NULL
@@ -172,7 +172,7 @@ wc.pol.gg <- edge.spp.dat %>%
   geom_errorbar(aes(ymin=Estimate-Std.Error, ymax=Estimate+Std.Error, group=quantile, color=quantile)) +
   scale_color_manual(values=c("grey","black")) +
   facet_wrap(~species, ncol=3)+
-  labs(x="Year", y="Coastal Distance (km)") +
+  labs(x="Year", y="Coastal Distance (km)", title="West Coast Poleward Edges") +
   theme_bw() +
   theme( axis.text.x = element_text(angle = 90, hjust = 1), legend.position="bottom", legend.title = element_blank())+
   NULL
@@ -198,7 +198,7 @@ ebs.eq.gg <- edge.spp.dat %>%
   geom_errorbar(aes(ymin=Estimate-Std.Error, ymax=Estimate+Std.Error, group=quantile, color=quantile)) +
   scale_color_manual(values=c("black","grey")) +
   facet_wrap(~species, ncol=4)+
-  labs(x="Year", y="Middle Domain Axis (km)") +
+  labs(x="Year", y="Middle Domain Axis (km)", title="Eastern Bering Sea Equatorward Edges") +
   theme_bw() +
   theme( axis.text.x = element_text(angle = 90, hjust = 1), legend.position="bottom", legend.title = element_blank())+
   NULL
@@ -224,7 +224,7 @@ ebs.pol.gg <- edge.spp.dat %>%
   geom_errorbar(aes(ymin=Estimate-Std.Error, ymax=Estimate+Std.Error, group=quantile, color=quantile)) +
   scale_color_manual(values=c("grey","black")) +
   facet_wrap(~species, ncol=4)+
-  labs(x="Year", y="Middle Domain Axis (km)") +
+  labs(x="Year", y="Middle Domain Axis (km)", title="Eastern Bering Sea Poleward Edges") +
   theme_bw() +
   theme( axis.text.x = element_text(angle = 90, hjust = 1), legend.position="bottom", legend.title = element_blank())+
   NULL

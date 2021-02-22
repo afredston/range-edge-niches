@@ -6,9 +6,10 @@ spp.bayes.niche.lm.stats <- read_csv( here("results","species_bayes_niche_lm_sum
 dat.predict.niche <- read_csv(here("processed-data","species_thermal_niche_v_time.csv"))
 
 # make example plots for methods schematic 
-ex.spp.ebs <- "paralithodes camtschaticus" # red king crab
-ex.spp.neus <- "gadus morhua" # atlantic cod
+ex.spp.ebs <- "limanda proboscidea" # longhead dab
+ex.spp.neus <- "homarus americanus" # lobster
 ex.spp.wc <- "sebastes pinniger" # canary rockfish
+
 
 ex.niche.gg.ebs <- dat.predict.niche %>%
   filter(region=="ebs",quantile=="quantile_0.99", species==ex.spp.ebs) %>%
@@ -17,7 +18,7 @@ ex.niche.gg.ebs <- dat.predict.niche %>%
   geom_point() +
   geom_line() +
   geom_errorbar() +
-  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm","Cold Extreme")) +
+  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm","Winter Extreme")) +
   theme_bw() +
   labs(x="Year",y="SST at Edge (°C)", color=NULL) +
   theme(legend.position="none",
@@ -32,7 +33,7 @@ ex.niche.gg.neus <- dat.predict.niche %>%
   geom_point() +
   geom_line() +
   geom_errorbar() +
-  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Summer Extreme","Winter Extreme")) +
   theme_bw() +
   labs(x="Year",y="SST at Edge (°C)", color=NULL) +
   theme(legend.position="none",  
@@ -47,7 +48,7 @@ ex.niche.gg.wc <- dat.predict.niche %>%
   geom_point() +
   geom_line() +
   geom_errorbar() +
-  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Summer Extreme","Winter Extreme")) +
   theme_bw() +
   labs(x="Year",y="SST at Edge (°C)", color=NULL) +
   theme(legend.position="none", 
@@ -68,7 +69,7 @@ neus.cold.niche.time.gg <- dat.predict.niche %>%
   geom_point() +
   geom_line() +
   geom_errorbar() +
-  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Summer Extreme","Winter Extreme")) +
   theme_bw() +
   labs(x="Year",y="Sea Surface Temperature at Edge (°C)", title="Northeast Poleward Edges", color=NULL) +
   theme(legend.position="bottom",
@@ -85,7 +86,7 @@ neus.warm.niche.time.gg <- dat.predict.niche %>%
   geom_point() +
   geom_line() +
   geom_errorbar() +
-  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Summer Extreme","Winter Extreme")) +
   theme_bw() +
   labs(x="Year",y="Sea Surface Temperature at Edge (°C)",title="Northeast Equatorward Edges",  color=NULL) +
   theme(legend.position="bottom",
@@ -102,7 +103,7 @@ wc.cold.niche.time.gg <- dat.predict.niche %>%
   geom_point() +
   geom_line() +
   geom_errorbar() +
-  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Summer Extreme","Winter Extreme")) +
   theme_bw() +
   labs(x="Year",y="Sea Surface Temperature at Edge (°C)", title="West Coast Poleward Edges", color=NULL) +
   theme(legend.position="bottom",
@@ -119,7 +120,7 @@ wc.warm.niche.time.gg <- dat.predict.niche %>%
   geom_point() +
   geom_line() +
   geom_errorbar() +
-  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Summer Extreme","Winter Extreme")) +
   theme_bw() +
   labs(x="Year",y="Sea Surface Temperature at Edge (°C)",title="West Coast Equatorward Edges",  color=NULL) +
   theme(legend.position="bottom",
@@ -136,7 +137,7 @@ ebs.cold.niche.time.gg <- dat.predict.niche %>%
   geom_point() +
   geom_line() +
   geom_errorbar() +
-  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Summer Extreme","Winter Extreme")) +
   theme_bw() +
   labs(x="Year",y="Sea Surface Temperature at Edge (°C)", title="Eastern Bering Sea Poleward Edges", color=NULL) +
   theme(legend.position="bottom",
@@ -153,7 +154,7 @@ ebs.warm.niche.time.gg <- dat.predict.niche %>%
   geom_point() +
   geom_line() +
   geom_errorbar() +
-  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+  scale_color_manual(values=c("#DF2301","#3A4ED0"), labels=c("Summer Extreme","Winter Extreme")) +
   theme_bw() +
   labs(x="Year",y="Sea Surface Temperature at Edge (°C)",title="Eastern Bering Sea Equatorward Edges",  color=NULL) +
   theme(legend.position="bottom",
