@@ -17,6 +17,9 @@ source(paste0(getwd(),'/functions/get_density.R'))
 library(doParallel)
 library(foreach)
 
+detectCores()
+registerDoParallel(18) # UPDATE FOR YOUR OWN MACHINE
+
 ########################
 ### model settings
 ########################
@@ -210,9 +213,6 @@ if (!file.exists(Z_gmFile) & reg %in% c('neus','wc')){
 ########################
 ###  start single-species models in parallel
 ########################
-
-detectCores()
-registerDoParallel(18) # UPDATE FOR YOUR OWN MACHINE
 
 foreach(j = Species_list) %dopar%{
   library(VAST)

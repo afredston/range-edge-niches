@@ -397,14 +397,14 @@ write_csv(dat.predict.lag, here("processed-data","species_thermal_niche_v_time_w
 # Bayesian test for edge thermal niche change over time 
 
 spp.bayes.niche.lm.df <- NULL
-for(i in unique(dat.predict.niche$species)) {
-  dfprep1 <- dat.predict.niche[dat.predict.niche$species==i,] # subdivide by species 
+for(i in unique(dat.predict$species)) {
+  dfprep1 <- dat.predict[dat.predict$species==i,] # subdivide by species 
   for(j in unique(dfprep1$region)) {
-    dfprep2 <- dat.predict.niche[dat.predict.niche$species==i & dat.predict.niche$region==j,] # subdivide by region, for the few spp found in multiple regions 
+    dfprep2 <- dat.predict[dat.predict$species==i & dat.predict$region==j,] # subdivide by region, for the few spp found in multiple regions 
     for(k in unique(dfprep2$quantile)) {
-      dfprep3 <- dat.predict.niche[dat.predict.niche$species==i & dat.predict.niche$region==j & dat.predict.niche$quantile==k,] # subdivide by quantile, for the few spp with both range edges
+      dfprep3 <- dat.predict[dat.predict$species==i & dat.predict$region==j & dat.predict$quantile==k,] # subdivide by quantile, for the few spp with both range edges
       for(l in unique(dfprep3$predicted.var)){
-        df <- dat.predict.niche[dat.predict.niche$species==i & dat.predict.niche$region==j & dat.predict.niche$quantile==k & dat.predict.niche$predicted.var==l,] # split by the two temperature extremes that we want to analyze separately
+        df <- dat.predict[dat.predict$species==i & dat.predict$region==j & dat.predict$quantile==k & dat.predict$predicted.var==l,] # split by the two temperature extremes that we want to analyze separately
         spp.bayes.lm <- try(stan_glm(sst ~ year_match, 
                                      data=df, 
                                      family=gaussian(), 
@@ -473,9 +473,9 @@ spp.bayes.niche.lm.stats %>%
 # non tracker - lobster - neus 
 
 # make example plots for methods schematic 
-ex.spp.ebs <- "paralithodes camtschaticus" # red king crab
-ex.spp.neus <- "gadus morhua" # atlantic cod
-ex.spp.wc <- "sebastes pinniger" # canary rockfish
+ex.spp.ebs <- "limanda proboscidea" 
+ex.spp.neus <- "homarus americanus" 
+ex.spp.wc <- "sebastes pinniger" 
 
 summary.spp.ebs <- spp.bayes.niche.lm.stats %>% 
   filter(species==ex.spp.ebs)
@@ -501,7 +501,7 @@ ex.spp.bayes.gg.ebs <- spp.bayes.niche.filter %>%
   geom_vline(aes(xintercept=0), color="black", linetype="dotted") + 
   geom_segment(aes(x=summary.spp.ebs[summary.spp.ebs$predicted.var=="predict.sstmax",]$lower, xend=summary.spp.ebs[summary.spp.ebs$predicted.var=="predict.sstmax",]$upper, y=-1, yend=-1), color="#DF2301", lwd=2) + # add 90% credible interval 
   geom_segment(aes(x=summary.spp.ebs[summary.spp.ebs$predicted.var=="predict.sstmin",]$lower, xend=summary.spp.ebs[summary.spp.ebs$predicted.var=="predict.sstmin",]$upper, y=0, yend=0), color="#3A4ED0", lwd=2) +
-  scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+  scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Summer","Winter")) +
   labs(x="Coefficient (°C/year)",y="Density", fill=NULL) +
   scale_x_continuous(breaks=c(-0.1, -0.05, 0, 0.05)) +
   theme(legend.position="none") +
@@ -520,7 +520,7 @@ ex.spp.bayes.gg.neus <- spp.bayes.niche.filter %>%
   geom_density(aes(x=mean.param, fill=predicted.var), color="black", alpha=0.5) +
   geom_vline(aes(xintercept=0), color="black", linetype="dotted") + 
   geom_segment(aes(x=summary.spp.neus[summary.spp.neus$predicted.var=="predict.sstmax",]$lower, xend=summary.spp.neus[summary.spp.neus$predicted.var=="predict.sstmax",]$upper, y=-1, yend=-1), color="#DF2301", lwd=2) + # add 90% credible interval 
-  geom_segment(aes(x=summary.spp.neus[summary.spp.neus$predicted.var=="predict.sstmin",]$lower, xend=summary.spp.neus[summary.spp.neus$predicted.var=="predict.sstmin",]$upper, y=0, yend=0), color="#3A4ED0", lwd=2) +scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+  geom_segment(aes(x=summary.spp.neus[summary.spp.neus$predicted.var=="predict.sstmin",]$lower, xend=summary.spp.neus[summary.spp.neus$predicted.var=="predict.sstmin",]$upper, y=0, yend=0), color="#3A4ED0", lwd=2) +scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Summer","Winter")) +
   labs(x="Coefficient (°C/year)",y="Density", fill=NULL) +
   scale_x_continuous(breaks=c(-0.1, -0.05, 0, 0.05)) +
   theme(legend.position="none") +
@@ -539,7 +539,7 @@ ex.spp.bayes.gg.wc <- spp.bayes.niche.filter %>%
   geom_density(aes(x=mean.param, fill=predicted.var), color="black", alpha=0.5) +
   geom_vline(aes(xintercept=0), color="black", linetype="dotted") + 
   geom_segment(aes(x=summary.spp.wc[summary.spp.wc$predicted.var=="predict.sstmax",]$lower, xend=summary.spp.wc[summary.spp.wc$predicted.var=="predict.sstmax",]$upper, y=-1, yend=-1), color="#DF2301", lwd=2) + # add 90% credible interval 
-  geom_segment(aes(x=summary.spp.wc[summary.spp.wc$predicted.var=="predict.sstmin",]$lower, xend=summary.spp.wc[summary.spp.wc$predicted.var=="predict.sstmin",]$upper, y=0, yend=0), color="#3A4ED0", lwd=2) +scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Warm Extreme","Cold Extreme")) +
+  geom_segment(aes(x=summary.spp.wc[summary.spp.wc$predicted.var=="predict.sstmin",]$lower, xend=summary.spp.wc[summary.spp.wc$predicted.var=="predict.sstmin",]$upper, y=0, yend=0), color="#3A4ED0", lwd=2) +scale_fill_manual(values=c("#DF2301","#3A4ED0"), labels=c("Summer","Winter")) +
   labs(x="Coefficient (°C/year)",y="Density", fill=NULL) +
   scale_x_continuous(breaks=c(-0.1, -0.05, 0, 0.05)) +
   theme(legend.position="none") +
