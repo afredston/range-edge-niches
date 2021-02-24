@@ -1,8 +1,11 @@
 library(tidyverse)
 library(here)
+library(stringr)
 
-spp.bayes.edge.lm.df.summary <- read_csv(here("results","species_edge_shifts_vs_time.csv")) # edge shifts over time
+spp.bayes.edge.lm.df.summary <- read_csv(here("results","species_edge_shifts_vs_time.csv")) # edge shifts over time 
 spp.bayes.niche.results <- read_csv(here("results","edge_thermal_extreme_tracked_summary.csv")) # thermal extreme tracked by each edge (warm, cold, both, or neither)
+
+# note that the final version of this figure had annotated outliers. these were added manually in Inkscape by sorting the spp.bayes.edge.lm.df.summary dataframe by the median column to identify the most extreme range shifts.
 
 gg.neus.violin <- spp.bayes.edge.lm.df.summary %>%
   left_join(spp.bayes.niche.results, by=c("species","region","quantile")) %>%
@@ -26,7 +29,7 @@ gg.neus.violin <- spp.bayes.edge.lm.df.summary %>%
   theme_bw() +
   facet_wrap(~quantile, ncol=1) + 
   labs(x=NULL, y="Temperature Extreme Tracked", title="Northeast") +
-    theme(legend.position = "none") +
+  theme(legend.position = "none") +
   # theme(legend.position = "none", axis.text.x = element_blank()) +
   NULL
 gg.neus.violin
@@ -52,7 +55,7 @@ gg.wc.violin <- spp.bayes.edge.lm.df.summary %>%
   coord_cartesian(xlim=c(-25, 25)) +
   scale_x_continuous(labels=seq(-25, 25, 5), breaks=seq(-25, 25, 5)) +  theme_bw() +
   facet_wrap(~quantile, ncol=1) + 
-#  labs(x=NULL, y="Temperature Extreme Tracked", title="West Coast") +
+  #  labs(x=NULL, y="Temperature Extreme Tracked", title="West Coast") +
   labs(x=NULL, y=NULL, title="West Coast") +
   theme(legend.position = "none") +
   # theme(legend.position = "none", axis.text.x = element_blank()) +

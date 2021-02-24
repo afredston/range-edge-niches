@@ -27,23 +27,23 @@ There are some additional directories for model outputs that are not version con
 
 ## Instructions
 
-Scripts should be run in the following order:
+Scripts should be run in the following order. The bulk of the analysis can be found in `run_VAST.R`, where range edges are estimated, and `calculate_edge_thermal_niches.R`, where Bayesian linear regressions are fitted to change in range edge and thermal niche position over time. 
 
-1. `get_neus_data.R` imports Northeast data (the only dataset requiring manual download) and reformats it to match those downloaded with [FishData](https://github.com/James-Thorson/FishData)
-1. `get_axes_of_measurement.R` creates a coastal distance axis for use with VAST for those two regions
-1. `run_VAST.R` uses VAST to calculate range edges for all three regions. It runs in parallel (don't forget to update the number of cores based on your machine!) but even so may take several days for all species and regions. Note that the output data frames are also in the repository
+1. `get_neus_data.R` imports Northeast data (the only dataset requiring manual download) and reformats it to match those downloaded with [FishData](https://github.com/James-Thorson/FishData).
+1. `get_axes_of_measurement.R` creates a custom axis for use with VAST in each region.
+1. `run_VAST.R` uses VAST to calculate range edges for all three regions. It runs in parallel (don't forget to update the number of cores based on your machine!) but even so may take several days for all species and regions. Note that the output data frames are also in the repository.
 1. `get_taxonomy.R` fetches higher taxonomy of study species from [WORMS](http://marinespecies.org/aphia.php?p=search) using [taxize](https://github.com/ropensci/taxize/). This needs to be re-run every time VAST is re-run in `run_VAST.R` 
-1. `validate_range_edges.R` filters the VAST output for only range edges that actually fall in the study region, based on passing certain filters. It then matches the remaining edges with traits from [Beukhof et al. 2019](https://doi.org/10.1594/PANGAEA.900866). This needs to be re-run every time VAST is re-run in `run_VAST.R` 
-1. `prep_sst.R` fetches historical SST data from the [NOAA ERDDAP server](https://coastwatch.pfeg.noaa.gov/erddap/index.html) for each region, crops rasters to the extent of a bathymetric mask for each region that is also created in this script, performs a mean bias correction to combine different SST datasets, and writes the SST data out as dataframes. This does not need to be re-run unless spatial or temporal extent change
+1. `validate_range_edges.R` filters the VAST output for only range edges that actually fall in the study region, based on passing certain filters. It then matches the remaining edges with traits from [Beukhof et al. 2019](https://doi.org/10.1594/PANGAEA.900866). This needs to be re-run every time VAST is re-run in `run_VAST.R`.
+1. `prep_sst.R` fetches historical SST data from the [NOAA ERDDAP server](https://coastwatch.pfeg.noaa.gov/erddap/index.html) for each region, crops rasters to the extent of a bathymetric mask for each region that is also created in this script, performs a mean bias correction to combine different SST datasets, and writes the SST data out as dataframes. This does not need to be re-run unless spatial or temporal extent change.
 1. `match_sst_to_axis.R` matches SST values to points along the axis of range limit measurement for each study region, and combines SST datasets where necessary. This doesn't need to be re-run if new edges are generated, because it takes as input the VAST coordinates, not the range edge positions.
-1. `calculate_edge_thermal_niches.R` fits Bayesian models to range edges and edge thermal niches. DANGER: this script was developed on a remote server and may overwhelm personal computers' processing capacity.  
+1. `calculate_edge_thermal_niches.R` fits Bayesian models to range edges and edge thermal niches. It also generates a number of plots that require the full output from the sampling algorithm, including the example plot in the main text, and the traits analysis in the Supplement. DANGER: this script was developed on a remote server and may overwhelm personal computers' processing capacity.  
 1. `analyze_range_edges.R` conducts the main analyses in the paper. 
 1. `paper_stats.R` calculates miscellaneous statistical results reported in the manuscript. 
 
 Code to generate figures in the manuscript and supplementary materials can typically be found in the `figure-scripts` folder. A few exceptions: 
 
-* Figures 1 and 3 require the full output from the Bayesian models, which is quite large, to plot posteriors; those figures are generated at the end of `calculate_edge_thermal_niches.R`. 
-* The figures in Appendix 2 showing how the axes of measurement were developed are generated in `get_axes_of_measurement.R`
+* Figures plotting posterior distributions require the full output from the Bayesian models and are generated in `calculate_edge_thermal_niches.R`. 
+* The figures in Appendix 2 showing how the axes of measurement were developed are generated in `get_axes_of_measurement.R`.
 
 ## Computational requirements 
 
@@ -56,7 +56,7 @@ Windows Server 2019
 NVIDIA P4000 8Gb
 10Gb ethernet
 
-On this machine, the VAST models (`get_range_edges.R`) for all regions were run in parallel on 18 cores overnight. Bayesian models in `calculate_edge_thermal_niches.R` are not currently scripted to run in parallel; on this machine, each set of models takes several hours to run. The Bayesian models, especially the second set fitting edge thermal niche change over time, are highly memory-intensive and may crash systems with low memory capacity. 
+On this machine, the VAST models (`run_VAST.R`) for all regions were run in parallel on 18 cores overnight. Bayesian models in `calculate_edge_thermal_niches.R` are not currently scripted to run in parallel; on this machine, each set of models takes several hours to run. The Bayesian models, especially the second set fitting edge thermal niche change over time, are highly memory-intensive and may crash systems with low memory capacity. 
 
 ## Use, problems, and feedback
 
