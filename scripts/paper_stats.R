@@ -36,6 +36,9 @@ vast.spp %>% group_by(region) %>% summarise(n=n())
 # how many found in >1 region? 
 vast.spp %>% group_by(query) %>% summarise(n=n()) %>% filter(n>1) 
 
+# how many unique species?
+length(unique(vast.spp$query))
+
 # how many actually had range edges?
 dat.summary <- readRDS(here("processed-data","all_edge_spp_df.rds")) %>%
   ungroup() %>% # undo rowwise nature

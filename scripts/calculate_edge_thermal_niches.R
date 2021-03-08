@@ -21,7 +21,8 @@ library(tidybayes)
 dat.models <- readRDS(here("processed-data","all_edge_spp_df.rds")) %>%
   ungroup() %>% # undo rowwise nature
   mutate(axis = as.character(axis)) %>% # convert from factor
-  filter(axis %in% c('coast_km','line_km')) 
+  filter(axis %in% c('coast_km','line_km'),
+         !species == "mustelus canis") # get rid of one species for which VAST didn't estimate a SE
 
 # how many species?
 

@@ -1,6 +1,5 @@
 library(tidyverse)
 library(here)
-library(stringr)
 
 spp.bayes.edge.lm.df.summary <- read_csv(here("results","species_edge_shifts_vs_time.csv")) # edge shifts over time 
 spp.bayes.niche.results <- read_csv(here("results","edge_thermal_extreme_tracked_summary.csv")) # thermal extreme tracked by each edge (warm, cold, both, or neither)
