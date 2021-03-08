@@ -180,15 +180,12 @@ if (!file.exists(Z_gmFile) & reg %in% c('neus','wc')){
   
   # function to get coastal length of lat/lon coords
   get_length <- function(lon, lat, distdf) {
-    tmp <- distdf %>%
-      mutate(abs.diff.x2 = abs(x-lon)^2,
-             abs.diff.y2 = abs(y-lat)^2,
-             abs.diff.xy = sqrt(abs.diff.x2 + abs.diff.y2
-             )) %>%
-      filter(abs.diff.xy == min(abs.diff.xy)) %>%
-      dplyr::select(lengthfromhere) %>%
-      pull()
-    return(tmp)
+    tmp <- distdf 
+    tmp$abs.diff.x2 = abs(distdf$x-lon)^2
+    tmp$abs.diff.y2 = abs(distdf$y-lat)^2
+    tmp$abs.diff.xy = sqrt(tmp$abs.diff.x2 + tmp$abs.diff.y2) # get Euclidean dist from VAST points to all points along the coastal axis
+    tmp <- tmp[tmp$abs.diff.xy==min(tmp$abs.diff.xy),] # keep only the row with the minimum distance
+    return(tmp$lengthfromhere) # save the position of that row
   }
   # separate for EBS which doesn't use coastal distance
   
@@ -198,15 +195,12 @@ if (!file.exists(Z_gmFile) & reg %in% c('neus','wc')){
   
   # function to get coastal length of lat/lon coords
   get_length <- function(lon, lat, distdf) {
-    tmp <- distdf %>%
-      mutate(abs.diff.x2 = abs(x-lon)^2,
-             abs.diff.y2 = abs(y-lat)^2,
-             abs.diff.xy = sqrt(abs.diff.x2 + abs.diff.y2
-             )) %>%
-      filter(abs.diff.xy == min(abs.diff.xy)) %>%
-      dplyr::select(lengthfromhere) %>%
-      pull()
-    return(tmp)
+    tmp <- distdf 
+    tmp$abs.diff.x2 = abs(distdf$x-lon)^2
+    tmp$abs.diff.y2 = abs(distdf$y-lat)^2
+    tmp$abs.diff.xy = sqrt(tmp$abs.diff.x2 + tmp$abs.diff.y2) # get Euclidean dist from VAST points to all points along the coastal axis
+    tmp <- tmp[tmp$abs.diff.xy==min(tmp$abs.diff.xy),] # keep only the row with the minimum distance
+    return(tmp$lengthfromhere) # save the position of that row
   }
 } 
 
