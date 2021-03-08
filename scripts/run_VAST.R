@@ -720,7 +720,7 @@ foreach(j = Species_list) %dopar%{
   
   # if(!class(out_density)=='try-error'){
   #   out_density$species <- paste0(j) 
-  #   write.csv(out_density, file.path(paste0(RegionFile,j,"_density.csv")))}        
+  #   write.csv(out_density, file.path(paste0(RegionFile,j,"_density.csv")))}        javascript:;
   # not saving this right now because each df for each species is ~1M rows, but keeping the code so anyone running line-by-line can easily access the density df
   
   

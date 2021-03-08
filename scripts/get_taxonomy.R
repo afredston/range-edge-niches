@@ -12,12 +12,15 @@ SEtype <- SEoptions[1]
 
 ebs.vast <- if(SEtype=="relative"){readRDS(here("processed-data","ebs_relative_SE_vast_edge_df.rds"))
 }else{readRDS(here("processed-data","ebs_absolute_SE_vast_edge_df.rds"))} 
+ebs.vast$species <- as.character(ebs.vast$species) 
 
 neus.vast <- if(SEtype=="relative"){readRDS(here("processed-data","neus_relative_SE_vast_edge_df.rds"))
-}else{readRDS(here("processed-data","neus_absolute_SE_vast_edge_df.rds"))}
+}else{readRDS(here("processed-data","neus_absolute_SE_vast_edge_df.rds"))} 
+neus.vast$species <- as.character(neus.vast$species) 
 
 wc.vast <- if(SEtype=="relative"){readRDS(here("processed-data","wc_relative_SE_vast_edge_df.rds"))
 }else{readRDS(here("processed-data","wc_absolute_SE_vast_edge_df.rds"))} 
+wc.vast$species <- as.character(wc.vast$species) 
 
 neus.spplist <- c(unique(neus.vast$species)) %>% tolower() %>% str_replace_all("_", " ")
 wc.spplist <- c(unique(wc.vast$species)) %>% tolower() %>% str_replace_all("_", " ")
