@@ -166,7 +166,7 @@ for(i in 1:length(Regions)){
 # bind together all the model settings we specified earlier
 settings = make_settings( "n_x"=n_x, "Region"=Region, purpose="index", bias.correct=FALSE, use_anisotropy=FALSE, # turned off to help with model fitting 
                           "FieldConfig"=FieldConfig, "RhoConfig"=RhoConfig, "OverdispersionConfig"=OverdispersionConfig,
-                          "Options"=Options,"ObsModel"=ObsModel  )
+                          "Options"=Options,"ObsModel"=ObsModel, "Version"=Version  )
 
 # derived objects that are constant among all models in a region
 Year_Set <- sort(unique(Catch_rates$Year))
