@@ -44,7 +44,7 @@ write_rds(neus.coastdistdat, here("processed-data","neus_coastdistdat.rds"))
 
 ## West Coast:
 
-wc.ymin <- 30
+wc.ymin <- 34.4
 wc.ymax <- 50
 wc.xmin <- -126
 wc.xmax <- -117

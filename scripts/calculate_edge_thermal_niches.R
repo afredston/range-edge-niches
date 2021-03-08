@@ -91,7 +91,7 @@ for(i in unique(dat.models$species)) {
 # check for convergence 
 quantile(spp.bayes.edge.lm.df$intercept.rhat)
 quantile(spp.bayes.edge.lm.df$year_match.rhat)  
-quantile(spp.bayes.edge.lm.df$sigma.rhat) # this previously caused estimation problems, doesn't appear to be doing that anymore  
+quantile(spp.bayes.edge.lm.df$sigma.rhat) 
 
 spp.bayes.edge.filter <- spp.bayes.edge.lm.df %>% 
   group_by(region, species, quantile) %>%
