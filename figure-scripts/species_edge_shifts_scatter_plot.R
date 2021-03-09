@@ -18,8 +18,8 @@ spp.edge.niche.summary <- read_csv(here("results","species_bayes_niche_lm_summar
 gg.edge.niche.scatter <- spp.edge.niche.summary %>% 
   filter(!species=='merluccius albidus') %>% # eliminating one outlier that shifted >20 km/yr into summer temperatures that were 0.2 C/yr hotter!
   ggplot(aes(x=mean, y=mean.niche, xmin=lower, xmax=upper, ymin=lower.niche, ymax=upper.niche, color=quantile, fill=quantile, shape=region)) +
-  scale_color_manual(values=c('#00441b','#238b45')) +
-  scale_fill_manual(values=c('#00441b','#238b45')) +
+  scale_color_manual(values=c('black','grey60')) +
+  scale_fill_manual(values=c('black','grey60')) +
   geom_errorbar() +
   geom_errorbarh() + 
   geom_hline(yintercept=0, color="black", linetype="dashed") +

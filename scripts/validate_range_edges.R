@@ -47,12 +47,15 @@ wc.df <- wc.vast %>%
   mutate(species = gsub("_", " ", species),
          species=tolower(species)) %>%
   pivot_wider(names_from=quantity, values_from=value ) %>%
-  rename("Std.Error"=`Std. Error`) 
+  rename("Std.Error"=`Std. Error`) %>% 
+#filter(axis=="coast_km") %>% # not using any others
+# mutate(Estimate = (Estimate - 213.4172)) # one-time correction for shortening the axis to eliminate SoCal
 
 # get bounds of each region
 ebs.maxnw <- max(ebs.df[ebs.df$axis=="line_km",]$Estimate)
 ebs.minnw <- min(ebs.df[ebs.df$axis=="line_km",]$Estimate)
 
+# note that this buffer calculation may be more conservative than using the coastal distance axis itself -- we're using the coastal distance points matched to the VAST nodes, which may not stretch all the way to the end of the axis in both directions
 ebs.axislen = ebs.maxnw-ebs.minnw
 ebs.buffer = ebs.axislen*buffer_amount
 
@@ -81,6 +84,9 @@ ebs.nw.edges <- ebs.df %>%
   mutate(edgecheck = between(meanedge, ebs.minnw+ebs.buffer, ebs.maxnw-ebs.buffer)) %>%
   filter(edgecheck==TRUE)
 
+# how many species did this eliminate?
+length(unique(ebs.df$species)) - length(unique(ebs.nw.edges$species))
+
 neus.coast.edges <- neus.df %>%
   filter(axis=="coast_km",
          quantile %in% quantiles_to_use) %>%
@@ -92,6 +98,8 @@ neus.coast.edges <- neus.df %>%
   rowwise() %>%
   mutate(edgecheck = between(meanedge, neus.minUp+neus.buffer, neus.maxUp-neus.buffer)) %>%
   filter(edgecheck==TRUE)
+# how many species did this eliminate?
+length(unique(neus.df$species)) - length(unique(neus.coast.edges$species))
 
 wc.coast.edges <- wc.df %>%
   filter(axis=="coast_km",
@@ -104,6 +112,8 @@ wc.coast.edges <- wc.df %>%
   rowwise() %>%
   mutate(edgecheck = between(meanedge, wc.minUp+wc.buffer, wc.maxUp-wc.buffer)) %>%
   filter(edgecheck==TRUE)
+# how many species did this eliminate?
+length(unique(wc.df$species)) - length(unique(wc.coast.edges$species))
 
 # which species have which edges?
 wc.coast.pol.spp <- wc.coast.edges %>%

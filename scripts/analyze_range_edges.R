@@ -10,7 +10,8 @@ library(here)
 dat.models <- readRDS(here("processed-data","all_edge_spp_df.rds")) %>%
   ungroup() %>% # undo rowwise nature
   mutate(axis = as.character(axis)) %>% # convert from factor
-  filter(axis %in% c('coast_km','line_km')) 
+  filter(axis %in% c('coast_km','line_km'),
+         !species=="mustelus canis") 
 
 dat.summary <- dat.models %>% 
   group_by(species, quantile, region) %>%
@@ -53,5 +54,17 @@ spp.bayes.niche.results <- spp.bayes.niche.lm.stats %>%
   ungroup() %>%
   group_by(species, region, quantile, varTracked) %>% 
   summarise()
+
+# niche tracking by summer/winter
+spp.bayes.niche.results %>% 
+  group_by(varTracked) %>% 
+  summarise(n=n())
+
+
+# niche tracking by region
+spp.bayes.niche.results %>% 
+  group_by(varTracked, region) %>% 
+  summarise(n=n())
+
 # save list of range edges with which thermal extreme they tracked (cold, warm, both, or neither)
 write_csv(spp.bayes.niche.results, here("results","edge_thermal_extreme_tracked_summary.csv"))

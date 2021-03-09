@@ -26,7 +26,7 @@ generate_supplementary_plots = FALSE # toggle this off if you don't want the scr
 # select bounding boxes for all regions 
 neus_latrange <- c(35, 45)
 neus_lonrange <- c(-78, -66) 
-wc_latrange <- c(30, 50)
+wc_latrange <- c(34, 50)
 wc_lonrange <- c(-126, -117)
 ebs_latrange <- c(54, 66)
 ebs_lonrange <- c(-179.5, -154)

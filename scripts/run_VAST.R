@@ -289,7 +289,6 @@ foreach(j = Species_list) %dopar%{
   
   # if Z_gm matrix does not exist yet, generate it and save it 
   if (!file.exists(Z_gmFile) & reg %in% c('neus','wc')){
-    library(tidyverse)
     # edit Z_gm to add new axes:
     Z_gm = fit$spatial_list$loc_g
     # convert northings/eastings to lat/lon
@@ -316,7 +315,6 @@ foreach(j = Species_list) %dopar%{
   
   # different approach to coordinate conversion for EBS, which uses a rotated NW axis not coastal distance
   if (!file.exists(Z_gmFile) & reg=="ebs"){
-    library(tidyverse)
     Z_gm = fit$spatial_list$loc_g
     tmpUTM = cbind('PID'=1,'POS'=1:nrow(Z_gm),'X'=Z_gm[,'E_km'],'Y'=Z_gm[,'N_km'])
     attr(tmpUTM,"projection") = "UTM"

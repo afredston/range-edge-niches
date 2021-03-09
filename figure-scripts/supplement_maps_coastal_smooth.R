@@ -37,11 +37,14 @@ wc.xmax <- -117
 wc.bbox1 <- st_set_crs(st_as_sf(as(raster::extent(wc.xmin, wc.xmax, wc.ymin, wc.ymax), "SpatialPolygons")), st_crs(usamap))
 wc.bbox2 <- st_set_crs(st_as_sf(as(raster::extent(-123.5, wc.xmax, 45, wc.ymax), "SpatialPolygons")), st_crs(usamap))
 wc.bbox3 <- st_set_crs(st_as_sf(as(raster::extent(-124.5, wc.xmax, 48, wc.ymax), "SpatialPolygons")), st_crs(usamap))
+wc.bbox4 <- st_set_crs(st_as_sf(as(raster::extent(wc.xmin, wc.xmax, wc.xmin, 34), "SpatialPolygons")), st_crs(usamap))
+
 
 wcmap <- usamap %>% 
   st_intersection(wc.bbox1) %>%
   st_difference(wc.bbox2) %>% # crop out Puget Sound
-  st_difference(wc.bbox3)
+  st_difference(wc.bbox3) %>% 
+  st_difference(wc.bbox4) # crop out southernmost region that isn't in VAST domain
 
 # make plots of each region's smoothing for Supplement
 
@@ -81,3 +84,8 @@ ggsave(neus.smoothmap, dpi=160, height=7, width=7, file=here("results","smoothin
 
 ggsave(wc.smoothmap, dpi=160, height=7, width=3, filename=here("results","smoothing_map_wc.png"))
 #rm(list=ls())
+
+wc_smooth <- wcmap %>% 
+  smoothr::smooth(method="ksmooth", smoothness=1)
+
+st_write(wc_smooth, here("processed-data","wc_smoothed_coastline.shp"))

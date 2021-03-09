@@ -4,7 +4,8 @@ library(stringr)
 
 edge.spp.dat <- readRDS(here("processed-data","all_edge_spp_df.rds"))%>%
   ungroup() %>% # undo rowwise nature
-  mutate(axis = as.character(axis)) # convert from factor
+  mutate(axis = as.character(axis)) %>% # convert from factor
+  filter(!species=="mustelus canis")
 
 #####
 # make example plots for methods schematic 
@@ -132,6 +133,7 @@ wc05 <- readRDS(here("processed-data","wc_relative_SE_vast_edge_df.rds")) %>%
          species=tolower(species)) %>%
   pivot_wider(names_from=quantity, values_from=value ) %>%
   rename("Std.Error"=`Std. Error`) %>% 
+#  mutate(Estimate = Estimate - 213.4172) %>% # one-time correction for changing the axis of measurement on the WC to exclude socal
   filter(species %in% edge.spp.dat[edge.spp.dat$region=="wc" & edge.spp.dat$quantile=="quantile_0.01",]$species)  
 
 wc.eq.gg <- edge.spp.dat %>% 
@@ -158,6 +160,7 @@ wc95 <- readRDS(here("processed-data","wc_relative_SE_vast_edge_df.rds")) %>%
          species=tolower(species)) %>%
   pivot_wider(names_from=quantity, values_from=value ) %>%
   rename("Std.Error"=`Std. Error`) %>% 
+ #  mutate(Estimate = Estimate - 213.4172) %>% # one-time correction for changing the axis of measurement on the WC to exclude socal
   filter(species %in% edge.spp.dat[edge.spp.dat$region=="wc" & edge.spp.dat$quantile=="quantile_0.99",]$species)  
 
 wc.pol.gg <- edge.spp.dat %>% 

@@ -21,7 +21,7 @@ ebs.len <- (max(ebs.axisdistdat$lengthfromhere)-min(ebs.axisdistdat$lengthfromhe
 #################
 # all species with models fitted by VAST: 
 
-dat.models <- readRDS(here("processed-data","all_edge_spp_df.rds")) # just using this name to be consistent with the rest of the scripts 
+dat.models <- readRDS(here("processed-data","all_edge_spp_df.rds"))
 
 #################
 # summary of study species
@@ -61,7 +61,7 @@ dat.summary <- readRDS(here("processed-data","all_edge_spp_df.rds")) %>%
 dat.summary %>% group_by(region) %>% summarise(n=n())
 
 # write out for appendix
-write_csv(dat.summary, here("results","species_summary_for_supplement.csv"))
+write_csv(dat.summary %>% filter(!species=="mustelus canis"), here("results","species_summary_for_supplement.csv")) # get rid of mustelus canis for supplement since it was eliminated from the analysis
 
 #################
 # change in temperature over time

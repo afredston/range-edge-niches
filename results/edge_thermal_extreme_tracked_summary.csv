@@ -66,7 +66,7 @@ leptasterias polaris,ebs,quantile_0.01,both
 leptoclinus maculatus,ebs,quantile_0.01,both
 lethasterias nanimensis,ebs,quantile_0.01,both
 leucoraja erinacea,neus,quantile_0.01,both
-leucoraja garmani,neus,quantile_0.99,both
+leucoraja garmani,neus,quantile_0.01,both
 leucoraja ocellata,neus,quantile_0.01,none
 limanda aspera,ebs,quantile_0.99,both
 limanda proboscidea,ebs,quantile_0.99,predict.sstmin
@@ -89,7 +89,6 @@ merluccius bilinearis,neus,quantile_0.01,none
 metacarcinus magister,wc,quantile_0.01,both
 microstomus pacificus,wc,quantile_0.01,both
 morone saxatilis,neus,quantile_0.99,predict.sstmin
-mustelus canis,neus,quantile_0.99,both
 myoxocephalus jaok,ebs,quantile_0.99,both
 myoxocephalus octodecemspinosus,neus,quantile_0.01,both
 myoxocephalus scorpius,ebs,quantile_0.01,both
@@ -119,6 +118,7 @@ paralithodes platypus,ebs,quantile_0.99,both
 parastichopus leukothele,wc,quantile_0.01,both
 peprilus triacanthus,neus,quantile_0.99,both
 peristedion miniatum,neus,quantile_0.99,both
+phycis chesteri,neus,quantile_0.01,none
 placopecten magellanicus,neus,quantile_0.01,predict.sstmax
 platichthys stellatus,ebs,quantile_0.99,both
 pleuronectes quadrituberculatus,ebs,quantile_0.99,both

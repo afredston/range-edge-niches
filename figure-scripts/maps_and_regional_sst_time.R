@@ -241,7 +241,7 @@ wcmap <- ggplot() +
   geom_sf(data=wc_coast, color="black", linetype="dashed", lwd=1.5) +
   geom_sf(data=wc.origin, color="black", fill="transparent",shape=4, size=4, stroke=4)+
   geom_point(data=wc.coastdistrefs, aes(x=x, y=y), color="white") +
-  geom_text(data=wc.coastdistrefs, aes(x=x, y=y, label=coastdistround),hjust=0, nudge_x = 0.5, fontface="bold", size=3) + 
+  geom_text(data=wc.coastdistrefs, aes(x=x, y=y, label=coastdistround),hjust=0, nudge_x = 0.5, vjust=-0.5, fontface="bold", size=3) + 
   scale_x_continuous(limits = c(wc_lonrange[1], wc_lonrange[2]+1), expand = c(0, 0)) + # add extra space for labels
   scale_y_continuous(limits = wc_latrange, expand = c(0, 0), breaks = seq(32, 50, 2)) +
   theme_bw() +
