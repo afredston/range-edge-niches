@@ -1,8 +1,8 @@
-# Realized thermal niche tracking at range limits of North American marine species
+# Range edges of North American marine species are tracking temperature over decades
 
 ### A. Fredston, M. Pinsky, B. Selden, C. Szuwalski, J. T. Thorson, S. D. Gaines, B. S. Halpern 
 
-To reference the data or methods here, please cite [the preprint](https://www.authorea.com/doi/full/10.22541/au.160331933.33155622) (currently in press at Global Change Biology). Contact A. Fredston with questions at fredston@rutgers.edu. This repository can be cited as: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4625142.svg)](https://zenodo.org/badge/DOI/10.5281/zenodo.4625142)
+To reference the paper, data, or methods, please cite [Fredston *et al.* 2021](https://onlinelibrary.wiley.com/doi/10.1111/gcb.15614). Contact A. Fredston with questions or for a PDF of the paper at fredston@rutgers.edu. This repository also has a [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4625142.svg)](https://zenodo.org/badge/DOI/10.5281/zenodo.4625142).
 
 ## Overview 
 
